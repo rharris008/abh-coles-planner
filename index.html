@@ -1515,8 +1515,12 @@ function renderProdTable(pr) {
 function renderSchedule(week, pr) {
   const {satUsed} = pr;
   const sched = buildSchedule(week, pr);
-  document.getElementById('schedHdr').childNodes[0].textContent=`Shift Schedule — ${wkLabel(week)}  `;
+  const hdr = document.getElementById('schedHdr');
   const grid = document.getElementById('dayGrid');
+  // Coles portal removed the Shift Schedule tab, so these elements
+  // do not exist. Main planner keeps them. No-op if either is missing.
+  if (!hdr || !grid) return;
+  hdr.childNodes[0].textContent=`Shift Schedule — ${wkLabel(week)}  `;
 
   // Build date-indexed schedule map
   const byDate = {};
