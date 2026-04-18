@@ -1628,6 +1628,7 @@ function renderSchedule(week, pr) {
 
 // ══ RENDER: HORIZON ═══════════════════════════════════════════════════════════
 function renderHorizon() {
+  if (!document.getElementById('horizonTable')) return;  // Coles portal: tab stripped
   const weeks=ALL_WEEKS.filter(w=>w>=currentWeek).slice(0,12);
   let h=`<thead><tr><th>Week</th>`;
   SKUS.forEach(s=>h+=`<th class="num">${s}</th>`);
@@ -1728,6 +1729,7 @@ function renderDispatch() {
 
 // ══ RENDER: ALERTS ════════════════════════════════════════════════════════════
 function renderAlerts(pr) {
+  if (!document.getElementById('alertsPanel')) return;  // Coles portal: panel stripped
   const {demand,coverDays,finalShortfall,satTriggers,satLines,satUsed,ep} = pr;
   const alerts=[];
 
@@ -2196,7 +2198,9 @@ function parseActuals(xmlText, fname) {
 
 function renderActuals() {
   if (!actualsData || !currentWeek) return;
-  document.getElementById('actualsContent').style.display = 'block';
+  const ac = document.getElementById('actualsContent');
+  if (!ac) return;  // Coles portal: actuals tab stripped
+  ac.style.display = 'block';
   const pr = planWeek(currentWeek);
   const eff = getEff();
 
@@ -2327,6 +2331,7 @@ function normaliseLineLabel(line, loc, snapshotLineBSku) {
 }
 
 function renderReplan(pr, skuPlan, skuActual, completedDaysLoop) {
+  if (!document.getElementById('replanTable')) return;  // Coles portal: replan tab stripped
   const eff = getEff();
   const today = localToday();
   const tomorrow = addDays(today, 1);
@@ -3450,7 +3455,8 @@ function onWeekChange() {
       actualsData._completeDates = completeDates;
     } else {
       actualsData = null;
-      document.getElementById('actualsContent').style.display = 'none';
+      const ac = document.getElementById('actualsContent');
+      if (ac) ac.style.display = 'none';  // Coles portal: may be stripped
       setStat('Actuals', `No actuals for week ${fmtD(currentWeek)} — drop file to load`, false);
     }
   }
