@@ -518,11 +518,16 @@ availPal = () => Object.fromEntries(SKUS.map(s => {
 // the visible SKUS list), because downstream scheduling code references
 // 600ml 12pk even though Coles does not sell it, and undefined .total
 // would crash the EP forward-scan.
+// Scheduler code (EP New Line, HMPS) references demand['600ml 12pk']
+// even though Coles does not sell it. Keep this list in sync with
+// every SKU the scheduler reads, or those reads return undefined and
+// crash the render.
+const DEMAND_ZERO_FILL_SKUS = ['10L Cask','5L Cask','2L Bottle','600ml 12pk','600ml 6pk'];
 const _origGetDemand = getDemand;
 getDemand = function(week) {
   const raw = _origGetDemand(week) || {};
   const result = {};
-  const allSkus = new Set([...SKUS, ...Object.keys(raw)]);
+  const allSkus = new Set([...DEMAND_ZERO_FILL_SKUS, ...SKUS, ...Object.keys(raw)]);
   allSkus.forEach(s => {
     const coles = raw[s] ? (raw[s].coles || 0) : 0;
     result[s] = { ww: 0, coles: coles, metcash: 0, other: 0, total: coles };
