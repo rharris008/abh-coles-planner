@@ -195,6 +195,7 @@ tr.risk-a td{background:#FEF9F0}
 
 <div id="nav">
   <div class="tab active" onclick="switchTab('demand',this)">Demand &amp; Stock</div>
+  <div class="tab" onclick="switchTab('dispatch',this)">Dispatch Calendar</div>
   <div class="tab" onclick="switchTab('stock',this)">Stock</div>
   <div class="tab" onclick="switchTab('openorders',this)">Open Orders</div>
 </div>
@@ -266,6 +267,12 @@ tr.risk-a td{background:#FEF9F0}
 /div>
 
 /div>
+
+<!-- DISPATCH -->
+<div id="tab-dispatch" class="tc">
+  <div class="panel"><div class="ph red">Dispatch Calendar — Next 21 Days | Coles orders only | Allocated stock (40% for 10L/5L/2L, 100% for 600ml 6pk) | Dispatch-by dates applied</div>
+    <div class="tscroll"><table id="dispTable"></table></div></div>
+</div>
 
 <!-- STOCK -->
 <div id="tab-stock" class="tc">
@@ -1642,48 +1649,63 @@ function renderHorizon() {
 //      We apply colesDispatchOffset days: default 1 (dispatch day before arrival).
 // FIX: Other customer orders appear as dispatch events with required dates.
 function renderDispatch() {
+  const el = document.getElementById('dispTable');
+  if (!el) return;
   const today=localToday();
-  const end=addDays(today,21);  // extended to 3 weeks for better forward view
+  const end=addDays(today,21);  // 3 weeks forward view
   const all=[];
-  // WW: use need_arrival as-is (already ABH's arrival date; WW manages lead time)
-  WW_ORDERS.forEach(o=>{if(o.need_arrival>=today&&o.need_arrival<=end&&o.pallets>0)
-    all.push({retailer:'WW',...o, dispatchBy:addDays(o.need_arrival,-wwDispatchOffset)});});
-  // Coles: order_date IS the required DC arrival date. ABH must dispatch earlier.
-  COLES_ORDERS.forEach(o=>{if(o.order_date>=today&&o.order_date<=end&&o.pallets>0)
-    all.push({retailer:'Coles',need_arrival:o.order_date,delivery_date:o.order_date,order_date:o.order_date,sku:o.sku,units:o.units,pallets:o.pallets,
-      dispatchBy:addDays(o.order_date,-colesDispatchOffset)});});
-  // Metcash dispatch events
-  const mcOrders = metcashOvr ? metcashOvr.orders : METCASH_ORDERS;
-  mcOrders.forEach(o=>{
-    if(!o.pallets||!o.dispatch_by)return;
-    if(o.dispatch_by>=today&&o.dispatch_by<=end)
-      all.push({retailer:'Metcash',sku:o.sku,need_arrival:o.need_arrival,
-        delivery_date:o.need_arrival,order_date:o.dispatch_by,
-        units:o.units,pallets:o.pallets,dispatchBy:o.dispatch_by});
+
+  // ── Coles forecast orders (from coles_forecast Supabase table via COLES_ORDERS)
+  // order_date IS the required DC arrival date. ABH must dispatch 1 day earlier.
+  COLES_ORDERS.forEach(o=>{
+    if(o.order_date>=today&&o.order_date<=end&&o.pallets>0)
+      all.push({
+        retailer:'Coles', source:'forecast',
+        need_arrival:o.order_date, delivery_date:o.order_date,
+        order_date:o.order_date, sku:o.sku,
+        units:o.units, pallets:o.pallets,
+        docNum:'',
+        dispatchBy:addDays(o.order_date,-colesDispatchOffset)
+      });
   });
-  // Other customer dispatch events
-  SKUS.forEach(s=>{
-    const palWk=otherDemand[s]||0; if(!palWk) return;
-    // Spread across the next 3 weeks — one event per week
-    [0,7,14].forEach(offset=>{
-      const dt=addDays(today,offset+2); // proxy: dispatch mid-week
-      if(dt<=end) all.push({retailer:'Other',sku:s,need_arrival:dt,delivery_date:dt,
-        order_date:dt,units:Math.round(palWk*(UPP[s]||1)),pallets:palWk,dispatchBy:dt});
+
+  // ── Coles open orders (confirmed NS orders from open_order_lines Supabase table)
+  // These take priority — confirmed orders with ship dates
+  if (openOrdersData && openOrdersData.length) {
+    openOrdersData.forEach(o => {
+      if (!o.date || o.date < today || o.date > end) return;
+      if (!o.pallets || o.pallets <= 0) return;
+      all.push({
+        retailer:'Coles', source:'open_order',
+        need_arrival:o.date, delivery_date:o.date,
+        order_date:o.date, sku:o.sku,
+        units:o.units, pallets:o.pallets,
+        docNum:o.docNum || '',
+        dispatchBy:addDays(o.date,-colesDispatchOffset)
+      });
     });
-  });
+  }
+
   all.sort((a,b)=>a.need_arrival.localeCompare(b.need_arrival));
 
-  // Sequential depletion: running stock balance per SKU
+  if (!all.length) {
+    el.innerHTML='<tbody><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">No Coles dispatch events in the next 21 days. Upload a Coles forecast or load open orders to populate.</td></tr></tbody>';
+    return;
+  }
+
+  // Sequential depletion: running allocated stock balance per SKU (40% for 10L/5L/2L, 100% for 600ml 6pk)
   const runningStock = {...availPal()};
-  let h=`<thead><tr><th>Retailer</th><th>SKU</th><th>Dispatch By</th><th>Need Arrival</th><th class="num">Pallets</th><th class="num">Running Stock</th><th>Status</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>Source</th><th>Order No.</th><th>SKU</th><th>Dispatch By</th><th>DC Arrival</th><th class="num">Pallets</th><th class="num">Running Stock (Allocated)</th><th>Status</th></tr></thead><tbody>`;
   all.forEach(o=>{
     const urg=o.dispatchBy<=addDays(today,2);
     runningStock[o.sku]=(runningStock[o.sku]||0)-o.pallets;
     const covered=runningStock[o.sku]>=0;
     const shortQty=covered?0:Math.abs(runningStock[o.sku]);
-    const retailBadge=o.retailer==='WW'?'bb':o.retailer==='Coles'?'bg':o.retailer==='Metcash'?'ba':'bn';
+    const srcBadge=o.source==='open_order'?'bg':'ba';
+    const srcLabel=o.source==='open_order'?'Open Order':'Forecast';
     h+=`<tr class="${!covered?'risk-r':urg?'risk-a':''}">
-      <td><span class="badge ${retailBadge}">${o.retailer}</span></td>
+      <td><span class="badge ${srcBadge}">${srcLabel}</span></td>
+      <td style="font-size:10px;color:var(--muted)">${o.docNum||'—'}</td>
       <td><span class="chip ${CHIP[o.sku]}">${o.sku}</span></td>
       <td class="${urg?'r':''}">${fmtD(o.dispatchBy)}${urg?' ⚠':''}</td>
       <td>${fmtD(o.need_arrival)}</td>
@@ -1692,7 +1714,7 @@ function renderDispatch() {
       <td>${covered?'<span class="badge bg">COVERED</span>':`<span class="badge br">SHORT ${fmt(Math.round(shortQty))} pal</span>`}</td>
     </tr>`;
   });
-  document.getElementById('dispTable').innerHTML=h+'</tbody>';
+  el.innerHTML=h+'</tbody>';
 }
 
 // ══ RENDER: ALERTS ════════════════════════════════════════════════════════════
