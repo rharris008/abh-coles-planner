@@ -1238,35 +1238,35 @@ function renderSkuStrips(pr) {
 // ══ RENDER: DEMAND TABLE ══════════════════════════════════════════════════════
 function renderDemTable(pr) {
   const {demand} = pr;
-  let h=`<thead><tr><th>SKU</th><th class="num">WW (pal)</th><th class="num">Coles (pal)</th><th class="num">Metcash (pal)</th><th class="num">Other (pal)</th><th class="num">Total (pal)</th></tr></thead><tbody>`;
-  let tw=0,tc=0,tm2=0,to=0,tt=0;
+  // Coles portal: single retailer, so only show Coles pallets (and pack
+  // units for 600ml 6pk). No WW, no Metcash, no Other columns.
+  let h=`<thead><tr><th>SKU</th><th class="num">Coles (pal)</th></tr></thead><tbody>`;
+  let tc=0;
   SKUS.forEach(s=>{
-    const d=demand[s]; if(d.total===0) return;
-    const tm=d.metcash||0;
-    tw+=d.ww; tc+=d.coles; tm2+=tm; to+=d.other||0; tt+=d.total;
+    const d=demand[s]; if(!d || d.total===0) return;
+    tc+=d.coles;
     h+=`<tr><td><span class="chip ${CHIP[s]}">${s}</span></td>
-      <td class="num">${fmt(d.ww)}</td>
-      <td class="num">${fmt(d.coles)}</td>
-      <td class="num">${tm?`<strong>${fmt(tm)}</strong>`:'—'}</td>
-      <td class="num">${d.other?`<strong>${fmt(d.other)}</strong>`:'—'}</td>
-      <td class="num"><strong>${fmt(d.total)}</strong></td></tr>`;
+      <td class="num"><strong>${fmt(d.coles)}</strong></td></tr>`;
   });
   h+=`<tr style="background:var(--light)"><td><strong>TOTAL PALLETS</strong></td>
-    <td class="num"><strong>${fmt(tw)}</strong></td>
-    <td class="num"><strong>${fmt(tc)}</strong></td>
-    <td class="num"><strong>${tm2?fmt(tm2):'—'}</strong></td>
-    <td class="num"><strong>${to?fmt(to):'—'}</strong></td>
-    <td class="num"><strong>${fmt(tt)}</strong></td></tr></tbody>`;
+    <td class="num"><strong>${fmt(tc)}</strong></td></tr></tbody>`;
   document.getElementById('demTable').innerHTML=h;
 }
 
 // ══ RENDER: STOCK TABLE ═══════════════════════════════════════════════════════
 function renderStockTable(pr) {
   const {demand,netDem,coverDays} = pr;
+  // Coles portal: Stock and Open Orders columns show the Coles-allocated
+  // slice (40% for 10L/5L/2L, 100% for 600ml 6pk), matching Rob's spec.
   let h=`<thead><tr><th>SKU</th><th class="num">Stock (pal)</th><th class="num">Open Orders (pal)</th><th class="num">Avail (pal)</th><th class="num">Demand (pal)</th><th class="num">Net to Produce</th><th>Cover</th></tr></thead><tbody>`;
   SKUS.forEach(s=>{
-    const stk=stockPal[s]||0, dem=demand[s].total, net=Math.max(0,netDem[s]);
-    const oo=Math.round(openOrdersPal[s]||0);
+    const alloc = COLES_STOCK_ALLOC[s] || 0.40;
+    const stkFull = stockPal[s] || 0;
+    const ooFull  = openOrdersPal[s] || 0;
+    const stk = Math.round(stkFull * alloc);
+    const oo  = Math.round(ooFull  * alloc);
+    const dem = demand[s] ? demand[s].total : 0;
+    const net = Math.max(0, netDem[s] || 0);
     const avail=Math.max(0,stk-oo);
     const cov=dem>0?(avail/dem).toFixed(1)+'w':'—';
     const covCls=dem>0&&avail/dem<1?'r':dem>0&&avail/dem<1.5?'a':'g';
