@@ -2791,19 +2791,25 @@ function parseInventoryFromRows(rows, fname) {
 }
 
 function renderStockDetail(stockPalLocal, stockUnitsLocal, reportDate) {
+  // Coles portal: detail panel must show Coles allocation only, never
+  // full-company stock. Apply COLES_STOCK_ALLOC to both units and
+  // pallets. Column header renamed to make the allocation explicit.
   let h = `<thead><tr>
     <th>SKU</th>
-    <th class="num">Units on Hand</th>
-    <th class="num">Pallets</th>
+    <th class="num">Coles Units on Hand</th>
+    <th class="num">Coles Pallets</th>
     <th class="num">On Hold (pal)</th>
     <th class="num">Available (pal)</th>
     <th>Source</th>
   </tr></thead><tbody>`;
   SKUS.forEach(s => {
-    const units = stockUnitsLocal ? (stockUnitsLocal[s] || STOCK_UNITS[s] || 0) : (STOCK_UNITS[s] || 0);
-    const pal   = stockPalLocal   ? (stockPalLocal[s]   || stockPal[s]   || 0) : (stockPal[s]   || 0);
-    const hold  = onHoldPal[s] || 0;
-    const avail = Math.max(0, pal - hold);
+    const alloc = COLES_STOCK_ALLOC[s] || 0.40;
+    const unitsFull = stockUnitsLocal ? (stockUnitsLocal[s] || STOCK_UNITS[s] || 0) : (STOCK_UNITS[s] || 0);
+    const palFull   = stockPalLocal   ? (stockPalLocal[s]   || stockPal[s]   || 0) : (stockPal[s]   || 0);
+    const units = Math.round(unitsFull * alloc);
+    const pal   = palFull * alloc;
+    const hold  = Math.round((onHoldPal[s] || 0) * alloc);
+    const avail = Math.max(0, Math.round(pal) - hold);
     h += `<tr>
       <td><span class="chip ${CHIP[s]}">${s}</span></td>
       <td class="num">${fmt(units)}</td>
