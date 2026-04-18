@@ -514,11 +514,16 @@ availPal = () => Object.fromEntries(SKUS.map(s => {
 // Override getDemand: return only coles demand, total = coles only.
 // Must use assignment (not function declaration) so hoisting does not
 // clobber _origGetDemand with the override and cause infinite recursion.
+// Must populate every SKU the original demand object knew about (not just
+// the visible SKUS list), because downstream scheduling code references
+// 600ml 12pk even though Coles does not sell it, and undefined .total
+// would crash the EP forward-scan.
 const _origGetDemand = getDemand;
 getDemand = function(week) {
-  const raw = _origGetDemand(week);
+  const raw = _origGetDemand(week) || {};
   const result = {};
-  SKUS.forEach(s => {
+  const allSkus = new Set([...SKUS, ...Object.keys(raw)]);
+  allSkus.forEach(s => {
     const coles = raw[s] ? (raw[s].coles || 0) : 0;
     result[s] = { ww: 0, coles: coles, metcash: 0, other: 0, total: coles };
   });
