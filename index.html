@@ -511,9 +511,11 @@ availPal = () => Object.fromEntries(SKUS.map(s => {
   return [s, Math.round(raw * alloc)];
 }));
 
-// Override getDemand: return only coles demand, total = coles only
+// Override getDemand: return only coles demand, total = coles only.
+// Must use assignment (not function declaration) so hoisting does not
+// clobber _origGetDemand with the override and cause infinite recursion.
 const _origGetDemand = getDemand;
-function getDemand(week) {
+getDemand = function(week) {
   const raw = _origGetDemand(week);
   const result = {};
   SKUS.forEach(s => {
@@ -521,7 +523,7 @@ function getDemand(week) {
     result[s] = { ww: 0, coles: coles, metcash: 0, other: 0, total: coles };
   });
   return result;
-}
+};
 
 
 // ══ AS LINE A&B — DAY-LEVEL SCHEDULER ════════════════════════════════════════
