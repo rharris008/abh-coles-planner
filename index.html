@@ -1195,9 +1195,11 @@ function renderSkuStrips(pr) {
   let html = '';
   SKUS.forEach(s => {
     const dem    = demand[s].total;
-    const todayStk = Math.round(stockPal[s]||0);      // today's physical stock — never changes
-    const projOpen = Math.round(pr.avail ? (pr.avail[s] ?? todayStk) : todayStk);  // projected opening for selected week
-    const cumMv    = projOpen - todayStk;              // cumulative net movement from today to selected week
+    // Coles portal: all tiles show the Coles-allocated slice (40% for 10L/5L/2L, 100% for 6pk).
+    const alloc  = COLES_STOCK_ALLOC[s] || 0.40;
+    const todayStk = Math.round((stockPal[s]||0) * alloc);  // Coles share of today's physical stock
+    const projOpen = Math.round(pr.avail ? (pr.avail[s] ?? todayStk) : todayStk);  // projected opening (already Coles-allocated via availPal override)
+    const cumMv    = projOpen - todayStk;              // Coles-only net movement from today to selected week
     const net    = Math.max(0, netDem[s]);
     const cov    = coverDays[s] || 0;
     const close  = closing[s] ?? 0;
@@ -2017,7 +2019,9 @@ function renderOpenOrders(reportDate, fname) {
   SKUS.forEach(s => {
     const t = skuTotals[s];
     if (!t || (t.pallets === 0 && t.amount === 0)) return;
-    const stk = Math.round(stockPal[s] || 0);
+    // Coles portal: show Coles-allocated stock slice, not full system stock
+    const alloc = COLES_STOCK_ALLOC[s] || 0.40;
+    const stk = Math.round((stockPal[s] || 0) * alloc);
     const after = stk - t.pallets;
     const afterCls = after < 0 ? 'r' : after < t.pallets ? 'a' : 'g';
     totPal += t.pallets; totAmt += t.amount;
