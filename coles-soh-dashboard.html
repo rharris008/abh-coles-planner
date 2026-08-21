@@ -503,7 +503,7 @@ function renderTab6(worst) {
 
   sortedRows.forEach((r, i) => {
     const alertClass = r.skus_oos >= 2 ? 'alert-red' : r.skus_oos === 1 ? 'alert-amber' : 'alert-navy';
-    const cell = v => v === 0 ? `<td class="oos-cell">0</td>` : `<td style="text-align:center;">${v}</td>`;
+    const cell = v => v === null ? `<td style="text-align:center;color:#999;">-</td>` : v === 0 ? `<td class="oos-cell">0</td>` : v === 1 ? `<td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td>` : `<td style="text-align:center;">${v}</td>`;
     const wks = appearances[r.store_name]?.size || 1;
     const wksStyle = wks >= 2 ? `style="text-align:center;font-weight:bold;color:#C0392B;"` : `style="text-align:center;color:#666;"`;
     const wksLabel = wks >= 2 ? `${wks}/${totalWeeks} &#9888;` : `${wks}/${totalWeeks}`;
