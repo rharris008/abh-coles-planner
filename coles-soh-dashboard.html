@@ -261,7 +261,7 @@ function renderTab1(daily, weekly, weekEnds) {
     html += `<th>${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
   }
   weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)} OOS</th>`);
-  html += `</tr>`;
+  html += `<th>Trend</th></tr>`;
 
   skus.forEach(sku => {
     const skuRows = weeks.map(w => weekly.find(r => r.snapshot_date === w.report_date && r.state === 'ALL' && r.sku === sku));
@@ -270,6 +270,8 @@ function renderTab1(daily, weekly, weekEnds) {
     b2vals.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
     for (let i = 0; i < b2vals.length - 1; i++) html += diffCell(b2vals[i+1] - b2vals[i]);
     skuRows.forEach(r => html += `<td style="text-align:center;">${r ? r.oos : 0}</td>`);
+    const overallDiff = b2vals.length >= 2 ? b2vals[b2vals.length-1] - b2vals[0] : 0;
+    html += `<td class="${overallDiff > 0 ? 'worsening' : overallDiff < 0 ? 'improving' : 'stable'}">${overallDiff > 0 ? 'WORSENING' : overallDiff < 0 ? 'IMPROVING' : 'STABLE'}</td>`;
     html += `</tr>`;
   });
   html += `</table></div>`;
