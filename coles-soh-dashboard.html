@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Coles Pureau SOH Dashboard — Week 3 FINAL (21/08/2026)</title>
-
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coles Pureau SOH Dashboard</title>
 <style>
 body{font-family:Arial,sans-serif;font-size:13px;color:#333;margin:0;padding:0;background:#f8f9fa;}
-.header{background:#1B2A4A;color:#fff;padding:16px 24px;}
+.header{background:#1B2A4A;color:#fff;padding:12px 24px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.header-left{flex:1;}
 .header h1{margin:0;font-size:18px;}
 .header p{margin:4px 0 0;font-size:12px;color:#cce;}
-.tabs{background:#fff;border-bottom:2px solid #CCCCCC;padding:0 24px;display:flex;gap:0;}
+.header-logos{display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.header-logos img{height:36px;width:auto;object-fit:contain;}
+.tabs{background:#fff;border-bottom:2px solid #CCCCCC;padding:0 24px;display:flex;gap:0;flex-wrap:wrap;position:sticky;top:0;z-index:99;}
 .tab{padding:10px 18px;cursor:pointer;font-size:13px;font-weight:bold;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;}
 .tab.active{color:#1B2A4A;border-bottom:3px solid #1B2A4A;}
 .tab:hover{color:#1B2A4A;background:#f5f5f5;}
@@ -22,7 +26,8 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#333;margin:0;padding:0;b
 .kpi .val.green{color:#27AE60;}
 .kpi .label{font-size:11px;color:#666;margin-top:4px;}
 table{border-collapse:collapse;width:100%;margin-bottom:20px;font-size:12px;}
-th{background:#1B2A4A;color:#fff;padding:6px 8px;text-align:center;font-size:11px;}
+th{background:#1B2A4A;color:#fff;padding:6px 8px;text-align:center;font-size:11px;position:sticky;top:0;z-index:10;}
+.table-wrap{overflow-x:auto;}
 td{padding:5px 8px;border:1px solid #e0e0e0;vertical-align:middle;}
 tr:nth-child(even){background:#F5F5F5;}
 .worsening{color:#C0392B;font-weight:bold;}
@@ -34,323 +39,413 @@ h2{font-size:15px;color:#1B2A4A;margin-top:0;}
 .locked-badge{background:#27AE60;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;}
 .open-badge{background:#E67E22;color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;}
 .footer{background:#1B2A4A;color:#aab;font-size:10px;text-align:center;padding:8px 24px;margin-top:24px;}
-@media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr;}.tabs{flex-wrap:wrap;}}
+.loading{text-align:center;padding:40px;color:#666;font-size:14px;}
+.alert-red{background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
+.alert-amber{background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
+.alert-navy{background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
+.oos-cell{background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;}
+@media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr;}}
 </style>
-
 </head>
 <body>
+
 <div class="header">
-  <h1>Pureau Coles Store SOH Dashboard</h1>
-  <p>Period: Tue 04/08/2026 to Fri 21/08/2026 | 901 Coles stores | Threshold: 2 units per SKU | Generated: 21/08/2026 | w/c 18/08 now LOCKED (Fri 21/08 = week end)</p>
+  <div class="header-left">
+    <h1>Pureau Coles Store SOH Dashboard</h1>
+    <p id="header-meta">901 Coles stores | Threshold: 2 units per SKU | Loading...</p>
+  </div>
+  <div class="header-logos">
+    <img src="pureau-logo.png" alt="Pureau">
+    <img src="abh-logo.png" alt="ABH">
+  </div>
 </div>
+
 <div class="tabs">
-  <div class="tab active" data-tab="tab1" onclick="showTab('tab1')">Weekly Comparison</div>
-  <div class="tab" data-tab="tab2" onclick="showTab('tab2')">State Trend</div>
-  <div class="tab" data-tab="tab3" onclick="showTab('tab3')">Daily Movement</div>
-  <div class="tab" data-tab="tab4" onclick="showTab('tab4')">State Analysis</div>
-  <div class="tab" data-tab="tab5" onclick="showTab('tab5')">SKU Analysis</div>
-  <div class="tab" data-tab="tab6" onclick="showTab('tab6')">Worst Stores</div>
+  <div class="tab active" onclick="showTab('tab1')">Weekly Comparison</div>
+  <div class="tab" onclick="showTab('tab2')">State Trend</div>
+  <div class="tab" onclick="showTab('tab3')">Daily Movement</div>
+  <div class="tab" onclick="showTab('tab4')">State Analysis</div>
+  <div class="tab" onclick="showTab('tab5')">SKU Analysis</div>
+  <div class="tab" onclick="showTab('tab6')">Worst Stores</div>
 </div>
-<!-- TAB 1: WEEKLY COMPARISON -->
-<div class="content active" id="tab1">
 
-<h2>Weekly Performance Comparison</h2>
-<div class="kpi-grid">
-  <div class="kpi"><div class="val">156</div><div class="label">Stores Below 2 Units<br>w/c 18/08 Final (Fri 21/08)</div></div>
-  <div class="val-box kpi"><div class="val red">93</div><div class="label">Stores OOS - Any SKU<br>w/c 18/08 Final (Fri 21/08)</div></div>
-  <div class="kpi"><div class="val">34</div><div class="label">ALL 4 SKUs OOS<br>w/c 18/08 Final (Fri 21/08)</div></div>
-  <div class="kpi"><div class="val">901</div><div class="label">Total Stores Reporting<br>Fri 21/08</div></div>
-</div>
-<table>
-<tr><th>Metric</th><th>w/c 04/08 <span class="locked-badge">LOCKED</span><br>Fri 08/08</th><th>w/c 11/08 <span class="locked-badge">LOCKED</span><br>Fri 15/08</th><th>w/c 18/08 <span class="locked-badge">LOCKED</span><br>Fri 21/08</th><th>w/c 04/08-w/c 11/08</th><th>w/c 11/08-w/c 18/08</th><th>Trend</th></tr>
-<tr><td>Stores with any Pureau SKU below 2 units</td><td>138</td><td>163</td><td>156</td><td class="worsening">+25</td><td class="improving">-7</td><td class="worsening">WORSENING</td></tr>
-<tr><td>Stores with any Pureau SKU OOS (0 units)</td><td>86</td><td>93</td><td>93</td><td class="worsening">+7</td><td class="">0</td><td class="worsening">WORSENING</td></tr>
-<tr><td>Stores with ALL 4 Pureau SKUs OOS</td><td>35</td><td>35</td><td>34</td><td class="">0</td><td class="improving">-1</td><td class="improving">IMPROVING</td></tr>
-<tr><td>Total stores reporting Pureau data</td><td>901</td><td>901</td><td>901</td><td>0</td><td>0</td><td>STABLE</td></tr>
-</table>
-<div class="section-head">SKU-Level: Stores Below 2 Units by Week</div>
-<table>
-<tr><th>SKU</th><th>w/c 04/08 Below 2</th><th>w/c 11/08 Below 2</th><th>w/c 18/08 Below 2 (Fri 21/08)</th><th>w/c 04/08-w/c 11/08</th><th>w/c 11/08-w/c 18/08</th><th>w/c 04/08 OOS</th><th>w/c 11/08 OOS</th><th>w/c 18/08 OOS</th></tr>
-<tr><td><strong>2L</strong></td><td>62</td><td>70</td><td>68</td><td class="worsening">+8</td><td class="improving">-2</td><td>44</td><td>46</td><td>50</td></tr>
-<tr><td><strong>5L</strong></td><td>83</td><td>97</td><td>89</td><td class="worsening">+14</td><td class="improving">-8</td><td>58</td><td>68</td><td>63</td></tr>
-<tr><td><strong>10L</strong></td><td>61</td><td>56</td><td>60</td><td class="improving">-5</td><td class="worsening">+4</td><td>39</td><td>38</td><td>44</td></tr>
-<tr><td><strong>600ml 6-Pack</strong></td><td>61</td><td>73</td><td>72</td><td class="worsening">+12</td><td class="improving">-1</td><td>50</td><td>52</td><td>52</td></tr>
-</table>
-<p style="color:#666;font-size:11px;">LOCKED = final snapshot (end-of-week Friday close). w/c 04/08 ended Fri 08/08, w/c 11/08 ended Fri 15/08, w/c 18/08 ended Fri 21/08.</p>
-</div>
-<!-- TAB 2: STATE TREND -->
-<div class="content" id="tab2">
-<h2>Store Count Below 2 Units by State — Week-on-Week</h2>
-<p class="subtitle">Each week = final-day snapshot. w/c 04/08: Fri 08/08, w/c 11/08: Fri 15/08, w/c 18/08: Fri 21/08.</p>
-<table><tr><th>State</th><th>Total Stores</th><th>w/c 04/08 Below 2</th><th>w/c 04/08 %</th><th>w/c 11/08 Below 2</th><th>w/c 11/08 %</th><th>w/c 18/08 Below 2</th><th>w/c 18/08 %</th><th>w/c 04/08-w/c 18/08 Change</th></tr>
-<tr><td><strong>NSW</strong></td><td>237</td><td>23</td><td>9.7%</td><td>32</td><td>13.5%</td><td>19</td><td>8.0%</td><td class="improving">-4</td></tr>
-<tr><td><strong>QLD</strong></td><td>224</td><td>27</td><td>12.1%</td><td>29</td><td>12.9%</td><td>30</td><td>13.4%</td><td class="worsening">+3</td></tr>
-<tr><td><strong>SA</strong></td><td>65</td><td>14</td><td>21.5%</td><td>23</td><td>35.4%</td><td>16</td><td>24.6%</td><td class="worsening">+2</td></tr>
-<tr><td><strong>TAS</strong></td><td>19</td><td>4</td><td>21.1%</td><td>6</td><td>31.6%</td><td>5</td><td>26.3%</td><td class="worsening">+1</td></tr>
-<tr><td><strong>VIC</strong></td><td>251</td><td>47</td><td>18.7%</td><td>43</td><td>17.1%</td><td>62</td><td>24.7%</td><td class="worsening">+15</td></tr>
-<tr><td><strong>WA</strong></td><td>105</td><td>23</td><td>21.9%</td><td>30</td><td>28.6%</td><td>24</td><td>22.9%</td><td class="worsening">+1</td></tr>
-<tr style="font-weight:bold;background:#e8eef5;"><td>TOTAL</td><td>901</td><td>138</td><td>15.3%</td><td>163</td><td>18.1%</td><td>156</td><td>17.3%</td><td class="worsening">+18</td></tr>
-</table>
+<div class="content active" id="tab1"><div class="loading" id="load1">Loading data...</div></div>
+<div class="content" id="tab2"><div class="loading" id="load2">Loading data...</div></div>
+<div class="content" id="tab3"><div class="loading" id="load3">Loading data...</div></div>
+<div class="content" id="tab4"><div class="loading" id="load4">Loading data...</div></div>
+<div class="content" id="tab5"><div class="loading" id="load5">Loading data...</div></div>
+<div class="content" id="tab6"><div class="loading" id="load6">Loading data...</div></div>
 
-</div>
-<!-- TAB 3: DAILY MOVEMENT -->
-<div class="content" id="tab3">
-<h2>Daily Movement — All Weeks</h2>
-<p class="subtitle">Tue 04/08 to Fri 21/08/2026 (14 trading days). All 901 stores nationally.</p>
-<table><tr><th>Day</th><th>Stores</th><th>Below 2 (Any SKU)</th><th>% Below 2</th><th>OOS (Any SKU)</th><th>All 4 OOS</th><th>Day Trend</th></tr>
-<tr><td>Tue 04/08</td><td>901</td><td>246</td><td>27.3%</td><td>145</td><td>36</td><td>Baseline</td></tr>
-<tr><td>Wed 05/08</td><td>901</td><td>193</td><td>21.4%</td><td>120</td><td>36</td><td class="improving">IMPROVING</td></tr>
-<tr><td>Thu 06/08</td><td>901</td><td>275</td><td>30.5%</td><td>178</td><td>36</td><td class="worsening">WORSENING</td></tr>
-<tr><td>Fri 07/08</td><td>901</td><td>254</td><td>28.2%</td><td>147</td><td>36</td><td class="improving">IMPROVING</td></tr>
-<tr style="background:#EBF3FC;"><td><strong>Mon 10/08</strong></td><td>901</td><td>138</td><td>15.3%</td><td>86</td><td>35</td><td class="improving">IMPROVING</td></tr>
-<tr><td>Tue 11/08</td><td>901</td><td>148</td><td>16.4%</td><td>81</td><td>35</td><td>Baseline</td></tr>
-<tr><td>Wed 12/08</td><td>901</td><td>148</td><td>16.4%</td><td>82</td><td>35</td><td>STABLE</td></tr>
-<tr><td>Thu 13/08</td><td>901</td><td>142</td><td>15.8%</td><td>91</td><td>35</td><td class="improving">IMPROVING</td></tr>
-<tr><td>Fri 14/08</td><td>901</td><td>195</td><td>21.6%</td><td>103</td><td>35</td><td class="worsening">WORSENING</td></tr>
-<tr style="background:#EBF3FC;"><td><strong>Mon 17/08</strong></td><td>901</td><td>163</td><td>18.1%</td><td>93</td><td>35</td><td class="improving">IMPROVING</td></tr>
-<tr><td>Tue 18/08</td><td>901</td><td>138</td><td>15.3%</td><td>73</td><td>34</td><td>Baseline</td></tr>
-<tr><td>Wed 19/08</td><td>901</td><td>141</td><td>15.6%</td><td>85</td><td>34</td><td class="worsening">WORSENING</td></tr>
-<tr><td>Thu 20/08</td><td>901</td><td>191</td><td>21.2%</td><td>115</td><td>35</td><td class="worsening">WORSENING</td></tr>
-<tr style="background:#FDEAEF;"><td><strong>Fri 21/08 (LOCKED)</strong></td><td>901</td><td>156</td><td>17.3%</td><td>93</td><td>34</td><td class="improving">IMPROVING</td></tr>
-</table>
-<p style="color:#666;font-size:11px;">Blue rows = week-end snapshots (locked). Red row = Fri 21/08 = w/c 18/08 final day (now locked).</p>
+<div class="footer">Pureau Coles SOH Dashboard | Data sourced from Coles portal | INTERNAL - NOT FOR DISTRIBUTION</div>
 
-</div>
-<!-- TAB 4: STATE ANALYSIS -->
-<div class="content" id="tab4">
-<h2>State Analysis — Below 2 Units and OOS by SKU</h2>
-<p class="subtitle">Final-day snapshots: w/c 04/08 (Fri 08/08), w/c 11/08 (Fri 15/08), w/c 18/08 (Fri 21/08).</p>
-<div class="section-head">SECTION 1 - STORES BELOW 2 UNITS BY STATE</div>
-<table><tr><th>State</th><th>Total Stores</th><th>w/c 04/08 Count</th><th>w/c 04/08 %</th><th>w/c 11/08 Count</th><th>w/c 11/08 %</th><th>w/c 18/08 Count (Fri 21/08)</th><th>w/c 18/08 %</th><th>w/c 04/08-w/c 18/08 Change</th></tr>
-<tr><td><strong>NSW</strong></td><td>237</td><td>23</td><td>9.7%</td><td>32</td><td>13.5%</td><td>19</td><td>8.0%</td><td class="improving">-4</td></tr>
-<tr><td><strong>QLD</strong></td><td>224</td><td>27</td><td>12.1%</td><td>29</td><td>12.9%</td><td>30</td><td>13.4%</td><td class="worsening">+3</td></tr>
-<tr><td><strong>SA</strong></td><td>65</td><td>14</td><td>21.5%</td><td>23</td><td>35.4%</td><td>16</td><td>24.6%</td><td class="worsening">+2</td></tr>
-<tr><td><strong>TAS</strong></td><td>19</td><td>4</td><td>21.1%</td><td>6</td><td>31.6%</td><td>5</td><td>26.3%</td><td class="worsening">+1</td></tr>
-<tr><td><strong>VIC</strong></td><td>251</td><td>47</td><td>18.7%</td><td>43</td><td>17.1%</td><td>62</td><td>24.7%</td><td class="worsening">+15</td></tr>
-<tr><td><strong>WA</strong></td><td>105</td><td>23</td><td>21.9%</td><td>30</td><td>28.6%</td><td>24</td><td>22.9%</td><td class="worsening">+1</td></tr>
-</table>
-<div class="section-head">SECTION 2 - w/c 18/08 SKU BREAKDOWN BY STATE (Fri 21/08)</div>
-<table><tr><th>State</th><th>SKU</th><th>Total Listed</th><th>Below 2</th><th>% Below 2</th><th>OOS</th><th>% OOS</th></tr>
-<tr><td>NSW</td><td>2L</td><td>236</td><td>9</td><td>3.8%</td><td>8</td><td>3.4%</td></tr>
-<tr><td>NSW</td><td>5L</td><td>236</td><td>13</td><td>5.5%</td><td>7</td><td>3.0%</td></tr>
-<tr><td>NSW</td><td>10L</td><td>236</td><td>8</td><td>3.4%</td><td>7</td><td>3.0%</td></tr>
-<tr><td>NSW</td><td>600ml 6-Pack</td><td>237</td><td>10</td><td>4.2%</td><td>7</td><td>3.0%</td></tr>
-<tr><td>QLD</td><td>2L</td><td>223</td><td>15</td><td>6.7%</td><td>9</td><td>4.0%</td></tr>
-<tr><td>QLD</td><td>5L</td><td>222</td><td>15</td><td>6.8%</td><td>10</td><td>4.5%</td></tr>
-<tr><td>QLD</td><td>10L</td><td>222</td><td>9</td><td>4.1%</td><td>7</td><td>3.2%</td></tr>
-<tr><td>QLD</td><td>600ml 6-Pack</td><td>222</td><td>14</td><td>6.3%</td><td>10</td><td>4.5%</td></tr>
-<tr><td>SA</td><td>2L</td><td>65</td><td>5</td><td>7.7%</td><td>4</td><td>6.2%</td></tr>
-<tr><td>SA</td><td>5L</td><td>64</td><td>9</td><td>14.1%</td><td>6</td><td>9.4%</td></tr>
-<tr><td>SA</td><td>10L</td><td>64</td><td>7</td><td>10.9%</td><td>4</td><td>6.2%</td></tr>
-<tr><td>SA</td><td>600ml 6-Pack</td><td>65</td><td>8</td><td>12.3%</td><td>5</td><td>7.7%</td></tr>
-<tr><td>TAS</td><td>2L</td><td>19</td><td>3</td><td>15.8%</td><td>2</td><td>10.5%</td></tr>
-<tr><td>TAS</td><td>5L</td><td>19</td><td>5</td><td>26.3%</td><td>3</td><td>15.8%</td></tr>
-<tr><td>TAS</td><td>10L</td><td>19</td><td>2</td><td>10.5%</td><td>2</td><td>10.5%</td></tr>
-<tr><td>TAS</td><td>600ml 6-Pack</td><td>3</td><td>2</td><td>66.7%</td><td>2</td><td>66.7%</td></tr>
-<tr><td>VIC</td><td>2L</td><td>248</td><td>29</td><td>11.7%</td><td>22</td><td>8.9%</td></tr>
-<tr><td>VIC</td><td>5L</td><td>249</td><td>36</td><td>14.5%</td><td>29</td><td>11.6%</td></tr>
-<tr><td>VIC</td><td>10L</td><td>248</td><td>26</td><td>10.5%</td><td>19</td><td>7.7%</td></tr>
-<tr><td>VIC</td><td>600ml 6-Pack</td><td>250</td><td>32</td><td>12.8%</td><td>25</td><td>10.0%</td></tr>
-<tr><td>WA</td><td>2L</td><td>103</td><td>7</td><td>6.8%</td><td>5</td><td>4.9%</td></tr>
-<tr><td>WA</td><td>5L</td><td>101</td><td>11</td><td>10.9%</td><td>8</td><td>7.9%</td></tr>
-<tr><td>WA</td><td>10L</td><td>105</td><td>8</td><td>7.6%</td><td>5</td><td>4.8%</td></tr>
-<tr><td>WA</td><td>600ml 6-Pack</td><td>103</td><td>6</td><td>5.8%</td><td>3</td><td>2.9%</td></tr>
-</table>
-
-</div>
-<!-- TAB 5: SKU ANALYSIS -->
-<div class="content" id="tab5">
-<h2>SKU Analysis — All Weeks</h2>
-<p class="subtitle">Final-day snapshots: w/c 04/08 (Fri 08/08), w/c 11/08 (Fri 15/08), w/c 18/08 (Fri 21/08). Threshold: 2 units. 901 Coles stores nationally.</p>
-<table><tr><th>SKU</th><th>Below 2 (w/c 04/08)</th><th>Below 2 (w/c 11/08)</th><th>Below 2 (w/c 18/08)</th><th>w/c 04/08-w/c 11/08</th><th>w/c 11/08-w/c 18/08</th><th>w/c 04/08-w/c 18/08</th><th>OOS (w/c 04/08)</th><th>OOS (w/c 11/08)</th><th>OOS (w/c 18/08)</th><th>OOS w/c 04/08-w/c 11/08</th><th>OOS w/c 11/08-w/c 18/08</th><th>OOS w/c 04/08-w/c 18/08</th></tr>
-<tr><td><strong>2L</strong></td><td>62</td><td>70</td><td>68</td><td class="worsening">+8</td><td class="improving">-2</td><td class="worsening">+6</td><td>44</td><td>46</td><td>50</td><td class="worsening">+2</td><td class="worsening">+4</td><td class="worsening">+6</td></tr>
-<tr><td><strong>5L</strong></td><td>83</td><td>97</td><td>89</td><td class="worsening">+14</td><td class="improving">-8</td><td class="worsening">+6</td><td>58</td><td>68</td><td>63</td><td class="worsening">+10</td><td class="improving">-5</td><td class="worsening">+5</td></tr>
-<tr><td><strong>10L</strong></td><td>61</td><td>56</td><td>60</td><td class="improving">-5</td><td class="worsening">+4</td><td class="improving">-1</td><td>39</td><td>38</td><td>44</td><td class="improving">-1</td><td class="worsening">+6</td><td class="worsening">+5</td></tr>
-<tr><td><strong>600ml 6-Pack</strong></td><td>61</td><td>73</td><td>72</td><td class="worsening">+12</td><td class="improving">-1</td><td class="worsening">+11</td><td>50</td><td>52</td><td>52</td><td class="worsening">+2</td><td class="">0</td><td class="worsening">+2</td></tr>
-</table>
-<div class="section-head">VIC DETAIL (highest risk state) — w/c 18/08 Fri 21/08</div>
-<table><tr><th>SKU</th><th>VIC Stores Listed</th><th>VIC Below 2</th><th>VIC %</th><th>VIC OOS</th><th>VIC OOS %</th></tr>
-<tr><td>2L</td><td>248</td><td>29</td><td>11.7%</td><td>22</td><td>8.9%</td></tr>
-<tr><td>5L</td><td>249</td><td>36</td><td>14.5%</td><td>29</td><td>11.6%</td></tr>
-<tr><td>10L</td><td>248</td><td>26</td><td>10.5%</td><td>19</td><td>7.7%</td></tr>
-<tr><td>600ml 6-Pack</td><td>250</td><td>32</td><td>12.8%</td><td>25</td><td>10.0%</td></tr>
-</table>
-
-</div>
-<!-- TAB 6: WORST STORES -->
-<div class="content" id="tab6">
-<h2>Worst Stores — Immediate Attention Required (w/c 18/08, Fri 21/08)</h2>
-<p class="subtitle">156 stores below threshold in w/c 18/08 final day (Fri 21/08). Data from 20260821 SOH extract. Sorted: most OOS SKUs first. Per-SKU SOH shown for all 4 Pureau products.</p>
-<div style="display:flex;gap:10px;margin-bottom:12px;"><div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;"><strong>42</strong><br><small>6-Pack OOS + Other</small></div><div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;"><strong>51</strong><br><small>Single SKU OOS</small></div><div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;"><strong>63</strong><br><small>Low Stock (&lt;2)</small></div></div>
-<table><tr><th>#</th><th>State</th><th>Store</th><th>2L SOH</th><th>5L SOH</th><th>10L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Product Alert</th></tr>
-<tr><td style="text-align:center;color:#666;">1</td><td>NSW</td><td><strong>CS BINGARA GORGE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">2</td><td>NSW</td><td><strong>CS BOX HILL CITY</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">3</td><td>NSW</td><td><strong>CS BULK B2B NSW</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">4</td><td>NSW</td><td><strong>CS DRS NSW SOUTH</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">5</td><td>NSW</td><td><strong>CS SRS NSW</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">6</td><td>QLD</td><td><strong>CS ANNERLEY</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">7</td><td>QLD</td><td><strong>CS BULK B2B QLD</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">8</td><td>QLD</td><td><strong>CS DRS QLD SOUTH</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">9</td><td>QLD</td><td><strong>CS LILYWOOD</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">10</td><td>QLD</td><td><strong>CS MORAYFIELD SOUTH</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">11</td><td>QLD</td><td><strong>CS RICHLANDS</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">12</td><td>QLD</td><td><strong>CS SRS QLD</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">13</td><td>SA</td><td><strong>CS BULK B2B SA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">14</td><td>SA</td><td><strong>CS SRS SA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">15</td><td>SA</td><td><strong>CS TUDOR VALE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">16</td><td>TAS</td><td><strong>CS BULK B2B TAS</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">17</td><td>TAS</td><td><strong>CS SRS TAS</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">18</td><td>VIC</td><td><strong>COLES 3PL COMMUNITY</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">19</td><td>VIC</td><td><strong>CS BEST BUYS ONLINE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">20</td><td>VIC</td><td><strong>CS BEVERIDGE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">21</td><td>VIC</td><td><strong>CS BLUEPRINT</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">22</td><td>VIC</td><td><strong>CS BULK B2B VIC</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">23</td><td>VIC</td><td><strong>CS DIGGERS REST</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">24</td><td>VIC</td><td><strong>CS EXPORT  DHL</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">25</td><td>VIC</td><td><strong>CS EXPORT FP SM SUPE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">26</td><td>VIC</td><td><strong>CS EXPORT MOQ LAWAND</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">27</td><td>VIC</td><td><strong>CS EXPORT MOQ LESCO</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">28</td><td>VIC</td><td><strong>CS HAMPTON STREET</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">29</td><td>VIC</td><td><strong>CS MODE LOGISTICS</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">30</td><td>VIC</td><td><strong>CS SRS VIC</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">31</td><td>VIC</td><td><strong>CS VIC QUITE LIKE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">32</td><td>VIC</td><td><strong>VIC SUPER STORES DR</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">33</td><td>WA</td><td><strong>CS BULK B2B WA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">34</td><td>WA</td><td><strong>CS SRS WA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">35</td><td>NSW</td><td><strong>CS MEADOWBANK</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">36</td><td>QLD</td><td><strong>CS SOUTHPORT PARK</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">17</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">37</td><td>SA</td><td><strong>CS ADELAIDE MARKET S</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">38</td><td>VIC</td><td><strong>CS CORPORATE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">39</td><td>VIC</td><td><strong>CS PRODUCTIVITY PAN</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">40</td><td>NSW</td><td><strong>CS PRICING TEST NSW</strong></td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">2</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">41</td><td>VIC</td><td><strong>CS CHADSTONE</strong></td><td style="text-align:center;">12</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">7</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">2</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">42</td><td>VIC</td><td><strong>CS MIDDLE CAMBERWELL</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">18</td><td style="text-align:center;">8</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">2</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS + Other</span></td></tr>
-<tr><td style="text-align:center;color:#666;">43</td><td>VIC</td><td><strong>CS PAKENHAM</strong></td><td style="text-align:center;">7</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">15</td><td style="text-align:center;">2</td><td style="text-align:center;">2</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">44</td><td>VIC</td><td><strong>CS TRUGANINA TM SHOP</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-24</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-10</td><td style="text-align:center;">4</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">45</td><td>NSW</td><td><strong>CS BANKSTOWN</strong></td><td style="text-align:center;">18</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">6</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">46</td><td>VIC</td><td><strong>CS ESSENDON FIELDS</strong></td><td style="text-align:center;">15</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">47</td><td>VIC</td><td><strong>CS GLEN IRIS</strong></td><td style="text-align:center;">4</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">48</td><td>VIC</td><td><strong>CS HARPLEY</strong></td><td style="text-align:center;">6</td><td style="text-align:center;">5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">49</td><td>VIC</td><td><strong>CS INNOVATION CENTRE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">50</td><td>VIC</td><td><strong>CS RINGWOOD EAST</strong></td><td style="text-align:center;">12</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">7</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">51</td><td>WA</td><td><strong>CS BRIGHTON VILLAGE</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-4</td><td style="text-align:center;">7</td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">52</td><td>WA</td><td><strong>CS MEADOW SPRINGS</strong></td><td style="text-align:center;">10</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">6</td><td style="text-align:center;">2</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">53</td><td>NSW</td><td><strong>CS GREENACRE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">7</td><td style="text-align:center;">9</td><td style="text-align:center;">10</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">54</td><td>NSW</td><td><strong>CS MAYFIELD</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">8</td><td style="text-align:center;">3</td><td style="text-align:center;">10</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">55</td><td>NSW</td><td><strong>CS TUMUT</strong></td><td style="text-align:center;">11</td><td style="text-align:center;">4</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">56</td><td>QLD</td><td><strong>CS ALDERLEY</strong></td><td style="text-align:center;">6</td><td style="text-align:center;">8</td><td style="text-align:center;">15</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">57</td><td>QLD</td><td><strong>CS CORINDA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">5</td><td style="text-align:center;">10</td><td style="text-align:center;">18</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">58</td><td>QLD</td><td><strong>CS EVERTON PARK</strong></td><td style="text-align:center;">8</td><td style="text-align:center;">4</td><td style="text-align:center;">7</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">59</td><td>QLD</td><td><strong>CS PETRIE TERRACE</strong></td><td style="text-align:center;">17</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">15</td><td style="text-align:center;">8</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">60</td><td>QLD</td><td><strong>CS TIGERS JAS</strong></td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="text-align:center;">-</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">61</td><td>SA</td><td><strong>CS MARION</strong></td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">8</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">62</td><td>SA</td><td><strong>CS PALMERSTON</strong></td><td style="text-align:center;">39</td><td style="text-align:center;">10</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">33</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">63</td><td>SA</td><td><strong>CS PORT AUGUSTA</strong></td><td style="text-align:center;">5</td><td style="text-align:center;">5</td><td style="text-align:center;">4</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">64</td><td>SA</td><td><strong>CS RUNDLE PLACE</strong></td><td style="text-align:center;">31</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">10</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">65</td><td>TAS</td><td><strong>CS SPRING FARM VILLA</strong></td><td style="text-align:center;">3</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">-</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">66</td><td>VIC</td><td><strong>CHEFS FRESH PTY LTD</strong></td><td style="text-align:center;">-</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">-</td><td style="text-align:center;">-</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">67</td><td>VIC</td><td><strong>CS BALWYN NORTH</strong></td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">6</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">68</td><td>VIC</td><td><strong>CS BOX HILL CENTRAL</strong></td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">12</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">69</td><td>VIC</td><td><strong>CS BRANDON PARK</strong></td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">7</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">70</td><td>VIC</td><td><strong>CS BUNDOORA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">5</td><td style="text-align:center;">4</td><td style="text-align:center;">14</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">71</td><td>VIC</td><td><strong>CS GREENVALE</strong></td><td style="text-align:center;">4</td><td style="text-align:center;">6</td><td style="text-align:center;">10</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">72</td><td>VIC</td><td><strong>CS HIGHPOINT</strong></td><td style="text-align:center;">19</td><td style="text-align:center;">8</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">73</td><td>VIC</td><td><strong>CS LARA</strong></td><td style="text-align:center;">15</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">16</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">74</td><td>VIC</td><td><strong>CS MERNDA</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">11</td><td style="text-align:center;">7</td><td style="text-align:center;">11</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">75</td><td>VIC</td><td><strong>CS PARKHILL JUNCTION</strong></td><td style="text-align:center;">2</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">20</td><td style="text-align:center;">15</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">76</td><td>VIC</td><td><strong>CS PINEWOOD</strong></td><td style="text-align:center;">8</td><td style="text-align:center;">3</td><td style="text-align:center;">3</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">77</td><td>VIC</td><td><strong>CS PRAHRAN</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">7</td><td style="text-align:center;">14</td><td style="text-align:center;">4</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">78</td><td>VIC</td><td><strong>CS ROSEBUD</strong></td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td style="text-align:center;">2</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">79</td><td>VIC</td><td><strong>CS ST KILDA</strong></td><td style="text-align:center;">2</td><td style="text-align:center;">6</td><td style="text-align:center;">15</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">80</td><td>VIC</td><td><strong>CS SURREY HILLS</strong></td><td style="text-align:center;">11</td><td style="text-align:center;">5</td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#C0392B;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">81</td><td>VIC</td><td><strong>CS TARNEIT CENTRAL</strong></td><td style="text-align:center;">17</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">82</td><td>VIC</td><td><strong>CS WANGARATTA</strong></td><td style="text-align:center;">14</td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">13</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">83</td><td>WA</td><td><strong>CS ERSKINE</strong></td><td style="text-align:center;">8</td><td style="text-align:center;">6</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">84</td><td>WA</td><td><strong>CS FOREST LAKES</strong></td><td style="text-align:center;">8</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">85</td><td>WA</td><td><strong>CS GALLERIA</strong></td><td style="text-align:center;">12</td><td style="text-align:center;">4</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">86</td><td>WA</td><td><strong>CS GERALDTON</strong></td><td style="text-align:center;">15</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">12</td><td style="text-align:center;">-</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">87</td><td>WA</td><td><strong>CS NORTH ARMADALE</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">2</td><td style="text-align:center;">3</td><td style="text-align:center;">8</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">88</td><td>WA</td><td><strong>CS OCEAN KEYS</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">4</td><td style="text-align:center;">9</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">89</td><td>WA</td><td><strong>CS PINJARRA</strong></td><td style="text-align:center;">15</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">14</td><td style="text-align:center;">31</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">90</td><td>WA</td><td><strong>CS SOUTHLANDS</strong></td><td style="text-align:center;">7</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">14</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">91</td><td>WA</td><td><strong>CS TRINITY</strong></td><td style="text-align:center;">24</td><td style="text-align:center;">20</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">10</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">92</td><td>WA</td><td><strong>CS WARNBRO</strong></td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">3</td><td style="text-align:center;">11</td><td style="text-align:center;">4</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">93</td><td>WA</td><td><strong>CS YANCHEP</strong></td><td style="text-align:center;">20</td><td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td><td style="text-align:center;">17</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">1</td><td><span style="background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Non-6-Pack OOS</span></td></tr>
-<tr><td style="text-align:center;color:#666;">94</td><td>NSW</td><td><strong>CS WETHERILL TM SHOP</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-8</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-49</td><td style="text-align:center;">25</td><td style="text-align:center;">3</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-49 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">95</td><td>SA</td><td><strong>CS MUNNO PARA</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-3</td><td style="text-align:center;">5</td><td style="text-align:center;">3</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-3 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">96</td><td>SA</td><td><strong>CS REYNELLA</strong></td><td style="text-align:center;">9</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-1</td><td style="text-align:center;">3</td><td style="text-align:center;">2</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">97</td><td>TAS</td><td><strong>CS NEWSTEAD</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">9</td><td style="text-align:center;">-</td><td style="text-align:center;">2</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">98</td><td>VIC</td><td><strong>CS ALTONA GATE</strong></td><td style="text-align:center;">5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">2</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">99</td><td>NSW</td><td><strong>CS CHULLORA</strong></td><td style="text-align:center;">10</td><td style="text-align:center;">5</td><td style="text-align:center;">2</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">100</td><td>NSW</td><td><strong>CS GREEN VALLEY</strong></td><td style="text-align:center;">15</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">13</td><td style="text-align:center;">11</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">101</td><td>NSW</td><td><strong>CS HUNTLEE</strong></td><td style="text-align:center;">10</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">18</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">102</td><td>NSW</td><td><strong>CS INGLEBURN</strong></td><td style="text-align:center;">12</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">9</td><td style="text-align:center;">11</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">103</td><td>NSW</td><td><strong>CS NORTH ROCKS</strong></td><td style="text-align:center;">12</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-2</td><td style="text-align:center;">12</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-2 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">104</td><td>NSW</td><td><strong>CS TAREE</strong></td><td style="text-align:center;">18</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">8</td><td style="text-align:center;">36</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">105</td><td>NSW</td><td><strong>CS YORK STREET</strong></td><td style="text-align:center;">17</td><td style="text-align:center;">9</td><td style="text-align:center;">5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">106</td><td>QLD</td><td><strong>CS ASHGROVE</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">8</td><td style="text-align:center;">11</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">107</td><td>QLD</td><td><strong>CS BRACKEN RIDGE</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">7</td><td style="text-align:center;">12</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">108</td><td>QLD</td><td><strong>CS BUSHLAND BEACH</strong></td><td style="text-align:center;">16</td><td style="text-align:center;">10</td><td style="text-align:center;">14</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">109</td><td>QLD</td><td><strong>CS CAIRNS MT SHERID</strong></td><td style="text-align:center;">25</td><td style="text-align:center;">3</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-9</td><td style="text-align:center;">20</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-9 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">110</td><td>QLD</td><td><strong>CS CAIRNS SMITHFIEL</strong></td><td style="text-align:center;">23</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-1</td><td style="text-align:center;">6</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">111</td><td>QLD</td><td><strong>CS CAIRNS WESTCOURT</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">9</td><td style="text-align:center;">6</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">112</td><td>QLD</td><td><strong>CS FLAGSTONE</strong></td><td style="text-align:center;">13</td><td style="text-align:center;">5</td><td style="text-align:center;">18</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">113</td><td>QLD</td><td><strong>CS GUNNEDAH</strong></td><td style="text-align:center;">7</td><td style="text-align:center;">6</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">4</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">114</td><td>QLD</td><td><strong>CS HOPE ISLAND</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-1</td><td style="text-align:center;">14</td><td style="text-align:center;">24</td><td style="text-align:center;">17</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">115</td><td>QLD</td><td><strong>CS LABRADOR</strong></td><td style="text-align:center;">7</td><td style="text-align:center;">11</td><td style="text-align:center;">14</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">116</td><td>QLD</td><td><strong>CS MT OMMANEY</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-1</td><td style="text-align:center;">6</td><td style="text-align:center;">10</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">117</td><td>QLD</td><td><strong>CS REDLYNCH</strong></td><td style="text-align:center;">11</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-2</td><td style="text-align:center;">14</td><td style="text-align:center;">29</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-2 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">118</td><td>QLD</td><td><strong>CS SPRINGFIELD</strong></td><td style="text-align:center;">8</td><td style="text-align:center;">5</td><td style="text-align:center;">4</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">119</td><td>QLD</td><td><strong>CS THE GAP</strong></td><td style="text-align:center;">7</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">21</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">120</td><td>QLD</td><td><strong>CS THURINGOWA</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">9</td><td style="text-align:center;">9</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">121</td><td>QLD</td><td><strong>CS WOOLLOONGABBA</strong></td><td style="text-align:center;">19</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">13</td><td style="text-align:center;">7</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">122</td><td>QLD</td><td><strong>CS YEPPOON</strong></td><td style="text-align:center;">17</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-2</td><td style="text-align:center;">9</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-2 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">123</td><td>SA</td><td><strong>CS CASUARINA</strong></td><td style="text-align:center;">11</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">7</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">124</td><td>SA</td><td><strong>CS CHRISTIES BEACH</strong></td><td style="text-align:center;">6</td><td style="text-align:center;">4</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">125</td><td>SA</td><td><strong>CS EDWARDSTOWN</strong></td><td style="text-align:center;">10</td><td style="text-align:center;">2</td><td style="text-align:center;">5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">126</td><td>SA</td><td><strong>CS GAWLER GREEN</strong></td><td style="text-align:center;">10</td><td style="text-align:center;">5</td><td style="text-align:center;">5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">127</td><td>SA</td><td><strong>CS MT BARKER</strong></td><td style="text-align:center;">7</td><td style="text-align:center;">3</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">128</td><td>SA</td><td><strong>CS WARRADALE</strong></td><td style="text-align:center;">7</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">5</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">129</td><td>TAS</td><td><strong>CS DEVONPORT</strong></td><td style="text-align:center;">7</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">2</td><td style="text-align:center;">-</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">130</td><td>VIC</td><td><strong>CS ARDEER</strong></td><td style="text-align:center;">7</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">131</td><td>VIC</td><td><strong>CS BENDIGO</strong></td><td style="text-align:center;">9</td><td style="text-align:center;">9</td><td style="text-align:center;">10</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">132</td><td>VIC</td><td><strong>CS BRUNSWICK</strong></td><td style="text-align:center;">8</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">12</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">133</td><td>VIC</td><td><strong>CS CLAYTON</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">134</td><td>VIC</td><td><strong>CS COBURG NORTH</strong></td><td style="text-align:center;">11</td><td style="text-align:center;">11</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">31</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">135</td><td>VIC</td><td><strong>CS CORIO VILLAGE</strong></td><td style="text-align:center;">6</td><td style="text-align:center;">10</td><td style="text-align:center;">6</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-5</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-5 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">136</td><td>VIC</td><td><strong>CS CRANBOURNE WEST</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-1</td><td style="text-align:center;">3</td><td style="text-align:center;">6</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">137</td><td>VIC</td><td><strong>CS DELACOMBE</strong></td><td style="text-align:center;">12</td><td style="text-align:center;">9</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">138</td><td>VIC</td><td><strong>CS FLEMINGTON</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">6</td><td style="text-align:center;">16</td><td style="text-align:center;">8</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">139</td><td>VIC</td><td><strong>CS FOREST HILL</strong></td><td style="text-align:center;">8</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">14</td><td style="text-align:center;">15</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">140</td><td>VIC</td><td><strong>CS KARINGAL HUB</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">3</td><td style="text-align:center;">19</td><td style="text-align:center;">18</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">141</td><td>VIC</td><td><strong>CS LYNBROOK</strong></td><td style="text-align:center;">14</td><td style="text-align:center;">9</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">9</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">142</td><td>VIC</td><td><strong>CS RICHMOND ICON</strong></td><td style="text-align:center;">12</td><td style="text-align:center;">11</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">143</td><td>VIC</td><td><strong>CS SEYMOUR</strong></td><td style="text-align:center;">10</td><td style="text-align:center;">5</td><td style="text-align:center;">16</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-2</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-2 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">144</td><td>VIC</td><td><strong>CS TARNEIT WEST</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-2</td><td style="text-align:center;">9</td><td style="text-align:center;">6</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-2 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">145</td><td>VIC</td><td><strong>CS WENDOUREE</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">3</td><td style="text-align:center;">5</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">146</td><td>VIC</td><td><strong>CS WOODEND</strong></td><td style="text-align:center;">9</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">30</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">147</td><td>VIC</td><td><strong>CS WOODLEA</strong></td><td style="text-align:center;">33</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">10</td><td style="text-align:center;">12</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">148</td><td>WA</td><td><strong>CS BALDIVIS</strong></td><td style="text-align:center;">11</td><td style="text-align:center;">4</td><td style="text-align:center;">4</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">149</td><td>WA</td><td><strong>CS CAROUSEL</strong></td><td style="text-align:center;">16</td><td style="text-align:center;">6</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">3</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">150</td><td>WA</td><td><strong>CS DALYELLUP</strong></td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">3</td><td style="text-align:center;">8</td><td style="text-align:center;">8</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">151</td><td>WA</td><td><strong>CS HILLARYS</strong></td><td style="text-align:center;">3</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">5</td><td style="text-align:center;">14</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">152</td><td>WA</td><td><strong>CS INGLEWOOD</strong></td><td style="text-align:center;">2</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">-3</td><td style="text-align:center;">5</td><td style="text-align:center;">4</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (-3 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">153</td><td>WA</td><td><strong>CS KARAWARA</strong></td><td style="text-align:center;">9</td><td style="text-align:center;">6</td><td style="text-align:center;">5</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">154</td><td>WA</td><td><strong>CS KUNUNURRA</strong></td><td style="text-align:center;">8</td><td style="text-align:center;">12</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">6</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">155</td><td>WA</td><td><strong>CS MARGARET RIVER</strong></td><td style="text-align:center;">10</td><td style="text-align:center;">6</td><td style="text-align:center;">14</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-<tr><td style="text-align:center;color:#666;">156</td><td>WA</td><td><strong>CS RAINE SQUARE</strong></td><td style="text-align:center;">22</td><td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td><td style="text-align:center;">5</td><td style="text-align:center;">5</td><td style="text-align:center;">1</td><td style="text-align:center;">0</td><td><span style="background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold">Low Stock (1 units min)</span></td></tr>
-</table>
-<p style="color:#666;font-size:11px;"><strong>Product Alert guide:</strong> "6-Pack OOS + Other" = 600ml 6-Pack AND at least one other SKU OOS. "6-Pack OOS" = only 6-Pack at zero. "Non-6-Pack OOS" = 6-Pack ok but 2L/5L/10L at zero. "Low Stock" = no SKU OOS but all below 2. Red cells = OOS (0 units). Orange cells = below 2 units. Data source: 20260821_Nobles_STORE_SOH.xlsm.</p>
-
-</div>
-<div class="footer">ABH Pureau &mdash; Coles Store SOH Report | Period: 04/08/2026 - 21/08/2026 | Generated: 21/08/2026 | INTERNAL &mdash; NOT FOR DISTRIBUTION</div>
 <script>
-function showTab(id){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelector('[data-tab="'+id+'"]').classList.add('active');
-  document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+const SB_URL = 'https://gdfbpvzatnqmzujagtqm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkZmJwdnphdG5xbXp1amFndHFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzE3NTQsImV4cCI6MjA5MDIwNzc1NH0.O0XquoCFEaIL0xJZKGaPrFgfz42A_j1uKRUjhr6Zqvw';
+
+async function sbFetch(path) {
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
+  });
+  if (!r.ok) throw new Error(`Supabase ${r.status}: ${await r.text()}`);
+  return r.json();
 }
+
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function delta(a, b) {
+  const diff = b - a;
+  if (diff > 0) return `<span class="worsening">+${diff}</span>`;
+  if (diff < 0) return `<span class="improving">${diff}</span>`;
+  return `<span class="">0</span>`;
+}
+
+function trendClass(t) {
+  if (!t) return '';
+  if (t === 'IMPROVING') return 'improving';
+  if (t === 'WORSENING') return 'worsening';
+  if (t === 'STABLE') return 'stable';
+  return '';
+}
+
+function pct(n, d) { return d ? (n/d*100).toFixed(1)+'%' : '0%'; }
+
+function showTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', `tab${i+1}` === id));
+  document.querySelectorAll('.content').forEach(c => c.classList.toggle('active', c.id === id));
+}
+document.querySelectorAll('.tab').forEach((t,i) => t.onclick = () => showTab(`tab${i+1}`));
+
+function setTabsOffset() {
+  const h = document.querySelector('.header');
+  const t = document.querySelector('.tabs');
+  if (h && t) t.style.top = h.getBoundingClientRect().height + 'px';
+}
+window.addEventListener('load', setTabsOffset);
+window.addEventListener('resize', setTabsOffset);
+
+// ─── main load ───────────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [daily, weekly, worst] = await Promise.all([
+      sbFetch('coles_soh_daily?order=report_date.asc&limit=200'),
+      sbFetch('coles_soh_weekly?order=week_commencing.asc,snapshot_date.asc,state.asc,sku.asc&limit=500'),
+      sbFetch('coles_soh_worst_stores?order=skus_oos.desc,skus_below_2.desc,store_name.asc&limit=200'),
+    ]);
+
+    // Derive week list from daily data
+    const weekEnds = daily.filter(d => d.is_week_end).sort((a,b) => a.report_date.localeCompare(b.report_date));
+    const latestDay = daily[daily.length - 1];
+    const latestWeek = weekEnds[weekEnds.length - 1];
+
+    // Update header
+    if (daily.length) {
+      const first = daily[0].report_date;
+      const last  = latestDay.report_date;
+      document.getElementById('header-meta').textContent =
+        `Period: ${fmtDate(first)} to ${fmtDate(last)} | 901 Coles stores | Threshold: 2 units per SKU | Generated: ${fmtDate(last)}`;
+    }
+
+    renderTab1(daily, weekly, weekEnds);
+    renderTab2(weekly, weekEnds);
+    renderTab3(daily);
+    renderTab4(weekly, weekEnds);
+    renderTab5(weekly, weekEnds);
+    renderTab6(worst);
+  } catch(e) {
+    ['load1','load2','load3','load4','load5','load6'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = 'Error loading data: ' + e.message;
+    });
+  }
+}
+
+// ─── Tab 1: Weekly comparison ─────────────────────────────────────────────────
+function renderTab1(daily, weekly, weekEnds) {
+  if (!weekEnds.length) { document.getElementById('load1').textContent = 'No data.'; return; }
+
+  // Get all-state/all-sku rows per week-end
+  function weekSummary(snapshotDate) {
+    return weekly.find(w => w.snapshot_date === snapshotDate && w.state === 'ALL' && w.sku === 'ALL');
+  }
+  function weekSkuRows(snapshotDate) {
+    return weekly.filter(w => w.snapshot_date === snapshotDate && w.state === 'ALL' && w.sku !== 'ALL');
+  }
+
+  const skus = ['10L','5L','2L','600ml 6-Pack'];
+  const weeks = weekEnds.slice(-4); // up to last 4 weeks
+  const latest = weeks[weeks.length - 1];
+  const latestSum = weekSummary(latest.report_date);
+
+  let html = `<h2>Weekly Performance Comparison</h2>`;
+
+  // KPI tiles
+  html += `<div class="kpi-grid">
+    <div class="kpi"><div class="val">${latestSum ? latestSum.below_2 : '-'}</div><div class="label">Stores Below 2 Units<br>${latestSum ? `w/c ${fmtDate(latest.week_commencing)} Final` : ''}</div></div>
+    <div class="kpi"><div class="val red">${latestSum ? latestSum.oos : '-'}</div><div class="label">Stores OOS - Any SKU<br>${latestSum ? `w/c ${fmtDate(latest.week_commencing)} Final` : ''}</div></div>
+    <div class="kpi"><div class="val">${latestSum ? latestSum.all_4_oos : '-'}</div><div class="label">ALL 4 SKUs OOS<br>${latestSum ? `w/c ${fmtDate(latest.week_commencing)} Final` : ''}</div></div>
+    <div class="kpi"><div class="val">901</div><div class="label">Total Stores Reporting</div></div>
+  </div>`;
+
+  // Week comparison table (metrics × weeks)
+  html += `<div class="table-wrap"><table><tr><th>Metric</th>`;
+  weeks.forEach(w => {
+    const locked = w.is_week_end;
+    html += `<th>w/c ${fmtDate(w.week_commencing)} ${locked ? '<span class="locked-badge">LOCKED</span>' : '<span class="open-badge">LIVE</span>'}<br>${fmtDate(w.report_date)}</th>`;
+  });
+  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[weeks.length-2].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+  html += `<th>Trend</th></tr>`;
+
+  const metrics = [
+    {label:'Stores with any Pureau SKU below 2 units', key:'below_2'},
+    {label:'Stores with any Pureau SKU OOS (0 units)', key:'oos'},
+    {label:'Stores with ALL 4 Pureau SKUs OOS',        key:'all_4_oos'},
+  ];
+  metrics.forEach(m => {
+    html += `<tr><td>${m.label}</td>`;
+    const vals = weeks.map(w => { const s = weekSummary(w.report_date); return s ? s[m.key] : 0; });
+    vals.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
+    if (weeks.length >= 2) {
+      const diff = vals[vals.length-1] - vals[vals.length-2];
+      html += `<td style="text-align:center;">${diff > 0 ? `<span class="worsening">+${diff}</span>` : diff < 0 ? `<span class="improving">${diff}</span>` : `<span>0</span>`}</td>`;
+      html += `<td class="${diff > 0 ? 'worsening' : diff < 0 ? 'improving' : 'stable'}">${diff > 0 ? 'WORSENING' : diff < 0 ? 'IMPROVING' : 'STABLE'}</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</table></div>`;
+
+  // SKU breakdown table
+  html += `<div class="section-head">SKU-Level: Stores Below 2 Units by Week</div>`;
+  html += `<div class="table-wrap"><table><tr><th>SKU</th>`;
+  weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)} Below 2</th>`);
+  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[weeks.length-2].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+  weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)} OOS</th>`);
+  html += `</tr>`;
+
+  skus.forEach(sku => {
+    const skuRows = weeks.map(w => weekly.find(r => r.snapshot_date === w.report_date && r.state === 'ALL' && r.sku === sku));
+    html += `<tr><td><strong>${sku}</strong></td>`;
+    const b2vals = skuRows.map(r => r ? r.below_2 : 0);
+    b2vals.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
+    if (weeks.length >= 2) {
+      const diff = b2vals[b2vals.length-1] - b2vals[b2vals.length-2];
+      html += `<td style="text-align:center;">${diff > 0 ? `<span class="worsening">+${diff}</span>` : diff < 0 ? `<span class="improving">${diff}</span>` : `<span>0</span>`}</td>`;
+    }
+    skuRows.forEach(r => html += `<td style="text-align:center;">${r ? r.oos : 0}</td>`);
+    html += `</tr>`;
+  });
+  html += `</table></div>`;
+  html += `<p style="color:#666;font-size:11px;">LOCKED = final snapshot (end-of-week Friday close).</p>`;
+
+  document.getElementById('tab1').innerHTML = html;
+}
+
+// ─── Tab 2: State trend ───────────────────────────────────────────────────────
+function renderTab2(weekly, weekEnds) {
+  if (!weekEnds.length) { document.getElementById('load2').textContent = 'No data.'; return; }
+  const states = ['NSW','QLD','SA','TAS','VIC','WA'];
+  const weeks = weekEnds.slice(-4);
+  const storeTotals = {'NSW':237,'QLD':224,'SA':65,'TAS':19,'VIC':251,'WA':105,'ALL':901};
+
+  let html = `<h2>Store Count Below 2 Units by State — Week-on-Week</h2>
+    <p class="subtitle">Each week = final-day snapshot.</p>
+    <div class="table-wrap"><table><tr><th>State</th><th>Total Stores</th>`;
+  weeks.forEach(w => {
+    html += `<th>w/c ${fmtDate(w.week_commencing)} Below 2</th><th>w/c ${fmtDate(w.week_commencing)} %</th>`;
+  });
+  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)} Change</th>`;
+  html += `</tr>`;
+
+  [...states, 'ALL'].forEach(state => {
+    const total = storeTotals[state] || 0;
+    html += `<tr${state==='ALL' ? ' style="font-weight:bold;background:#e8eef5;"' : ''}><td><strong>${state}</strong></td><td style="text-align:center;">${total}</td>`;
+    const vals = weeks.map(w => {
+      const r = weekly.find(x => x.snapshot_date === w.report_date && x.state === state && x.sku === 'ALL');
+      return r ? r.below_2 : 0;
+    });
+    vals.forEach((v,i) => html += `<td style="text-align:center;">${v}</td><td style="text-align:center;">${pct(v, total)}</td>`);
+    if (weeks.length >= 2) {
+      const diff = vals[vals.length-1] - vals[0];
+      html += `<td style="text-align:center;">${diff > 0 ? `<span class="worsening">+${diff}</span>` : `<span class="improving">${diff}</span>`}</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</table></div>`;
+  document.getElementById('tab2').innerHTML = html;
+}
+
+// ─── Tab 3: Daily movement ────────────────────────────────────────────────────
+function renderTab3(daily) {
+  if (!daily.length) { document.getElementById('load3').textContent = 'No data.'; return; }
+  const weekStarts = new Set(daily.filter(d => d.is_week_end).map(d => d.week_commencing));
+
+  let html = `<h2>Daily Movement — All Weeks</h2>
+    <p class="subtitle">${fmtDate(daily[0].report_date)} to ${fmtDate(daily[daily.length-1].report_date)}. All 901 stores nationally.</p>
+    <div class="table-wrap"><table><tr><th>Day</th><th>Stores</th><th>Below 2 (Any SKU)</th><th>% Below 2</th><th>OOS (Any SKU)</th><th>All 4 OOS</th><th>Day Trend</th></tr>`;
+
+  daily.forEach(d => {
+    const isWeekEnd = d.is_week_end;
+    const rowStyle = isWeekEnd && daily.indexOf(d) === daily.length-1
+      ? ' style="background:#FDEAEF;"'
+      : isWeekEnd ? ' style="background:#EBF3FC;"' : '';
+    const dName = new Date(d.report_date + 'T00:00:00').toLocaleDateString('en-AU', {weekday:'short'});
+    const dateStr = `${dName} ${fmtDate(d.report_date)}${isWeekEnd ? ' <span class="locked-badge" style="font-size:10px;">LOCKED</span>' : ''}`;
+    const tc = trendClass(d.day_trend);
+    html += `<tr${rowStyle}><td>${dateStr}</td><td style="text-align:center;">${d.stores_reporting}</td>
+      <td style="text-align:center;">${d.below_2_any_sku}</td>
+      <td style="text-align:center;">${d.pct_below_2}%</td>
+      <td style="text-align:center;">${d.oos_any_sku}</td>
+      <td style="text-align:center;">${d.all_4_oos}</td>
+      <td class="${tc}">${d.day_trend || ''}</td></tr>`;
+  });
+  html += `</table></div><p style="color:#666;font-size:11px;">Blue rows = week-end snapshots (locked).</p>`;
+  document.getElementById('tab3').innerHTML = html;
+}
+
+// ─── Tab 4: State analysis ────────────────────────────────────────────────────
+function renderTab4(weekly, weekEnds) {
+  if (!weekEnds.length) { document.getElementById('load4').textContent = 'No data.'; return; }
+  const states = ['NSW','QLD','SA','TAS','VIC','WA'];
+  const storeTotals = {'NSW':237,'QLD':224,'SA':65,'TAS':19,'VIC':251,'WA':105};
+  const weeks = weekEnds.slice(-4);
+  const latestSnap = weeks[weeks.length-1].report_date;
+
+  let html = `<h2>State Analysis — Below 2 Units and OOS by SKU</h2>
+    <p class="subtitle">Final-day snapshots.</p>`;
+
+  // Section 1: below 2 by state
+  html += `<div class="section-head">SECTION 1 - STORES BELOW 2 UNITS BY STATE</div>
+    <div class="table-wrap"><table><tr><th>State</th><th>Total Stores</th>`;
+  weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)} Count</th><th>w/c ${fmtDate(w.week_commencing)} %</th>`);
+  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)} Change</th>`;
+  html += `</tr>`;
+
+  states.forEach(state => {
+    const total = storeTotals[state] || 0;
+    html += `<tr><td><strong>${state}</strong></td><td style="text-align:center;">${total}</td>`;
+    const vals = weeks.map(w => {
+      const r = weekly.find(x => x.snapshot_date === w.report_date && x.state === state && x.sku === 'ALL');
+      return r ? r.below_2 : 0;
+    });
+    vals.forEach(v => html += `<td style="text-align:center;">${v}</td><td style="text-align:center;">${pct(v,total)}</td>`);
+    if (weeks.length >= 2) {
+      const diff = vals[vals.length-1] - vals[0];
+      html += `<td style="text-align:center;">${diff > 0 ? `<span class="worsening">+${diff}</span>` : `<span class="improving">${diff}</span>`}</td>`;
+    }
+    html += `</tr>`;
+  });
+  html += `</table></div>`;
+
+  // Section 2: latest week state+SKU breakdown
+  html += `<div class="section-head">SECTION 2 - w/c ${fmtDate(weeks[weeks.length-1].week_commencing)} SKU BREAKDOWN BY STATE (${fmtDate(latestSnap)})</div>
+    <div class="table-wrap"><table><tr><th>State</th><th>SKU</th><th>Total Listed</th><th>Below 2</th><th>% Below 2</th><th>OOS</th><th>% OOS</th></tr>`;
+
+  states.forEach(state => {
+    ['10L','5L','2L','600ml 6-Pack'].forEach(sku => {
+      const r = weekly.find(x => x.snapshot_date === latestSnap && x.state === state && x.sku === sku);
+      if (!r) return;
+      html += `<tr><td>${state}</td><td>${sku}</td><td style="text-align:center;">${r.stores_total}</td>
+        <td style="text-align:center;">${r.below_2}</td><td style="text-align:center;">${pct(r.below_2,r.stores_total)}</td>
+        <td style="text-align:center;">${r.oos}</td><td style="text-align:center;">${pct(r.oos,r.stores_total)}</td></tr>`;
+    });
+  });
+  html += `</table></div>`;
+  document.getElementById('tab4').innerHTML = html;
+}
+
+// ─── Tab 5: SKU analysis ──────────────────────────────────────────────────────
+function renderTab5(weekly, weekEnds) {
+  if (!weekEnds.length) { document.getElementById('load5').textContent = 'No data.'; return; }
+  const skus = ['10L','5L','2L','600ml 6-Pack'];
+  const weeks = weekEnds.slice(-4);
+  const latestSnap = weeks[weeks.length-1].report_date;
+
+  let html = `<h2>SKU Analysis — All Weeks</h2>
+    <p class="subtitle">Final-day snapshots. Threshold: 2 units. 901 Coles stores nationally.</p>
+    <div class="table-wrap"><table><tr><th>SKU</th>`;
+  weeks.forEach(w => html += `<th>Below 2 (w/c ${fmtDate(w.week_commencing)})</th>`);
+  if (weeks.length >= 2) {
+    html += `<th>${fmtDate(weeks[weeks.length-2].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+    html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+  }
+  weeks.forEach(w => html += `<th>OOS (w/c ${fmtDate(w.week_commencing)})</th>`);
+  html += `</tr>`;
+
+  skus.forEach(sku => {
+    const rows = weeks.map(w => weekly.find(r => r.snapshot_date === w.report_date && r.state === 'ALL' && r.sku === sku));
+    const b2 = rows.map(r => r ? r.below_2 : 0);
+    const oos = rows.map(r => r ? r.oos : 0);
+    html += `<tr><td><strong>${sku}</strong></td>`;
+    b2.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
+    if (weeks.length >= 2) {
+      const d1 = b2[b2.length-1] - b2[b2.length-2];
+      const d2 = b2[b2.length-1] - b2[0];
+      html += `<td style="text-align:center;">${d1>0?`<span class="worsening">+${d1}</span>`:d1<0?`<span class="improving">${d1}</span>`:`<span>0</span>`}</td>`;
+      html += `<td style="text-align:center;">${d2>0?`<span class="worsening">+${d2}</span>`:d2<0?`<span class="improving">${d2}</span>`:`<span>0</span>`}</td>`;
+    }
+    oos.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
+    html += `</tr>`;
+  });
+  html += `</table></div>`;
+
+  // VIC detail
+  html += `<div class="section-head">VIC DETAIL (highest risk state) — w/c ${fmtDate(weeks[weeks.length-1].week_commencing)} Final</div>
+    <div class="table-wrap"><table><tr><th>SKU</th><th>VIC Stores Listed</th><th>VIC Below 2</th><th>VIC %</th><th>VIC OOS</th><th>VIC OOS %</th></tr>`;
+  skus.forEach(sku => {
+    const r = weekly.find(x => x.snapshot_date === latestSnap && x.state === 'VIC' && x.sku === sku);
+    if (!r) return;
+    html += `<tr><td>${sku}</td><td style="text-align:center;">${r.stores_total}</td>
+      <td style="text-align:center;">${r.below_2}</td><td style="text-align:center;">${pct(r.below_2,r.stores_total)}</td>
+      <td style="text-align:center;">${r.oos}</td><td style="text-align:center;">${pct(r.oos,r.stores_total)}</td></tr>`;
+  });
+  html += `</table></div>`;
+  document.getElementById('tab5').innerHTML = html;
+}
+
+// ─── Tab 6: Worst stores ──────────────────────────────────────────────────────
+function renderTab6(worst) {
+  if (!worst.length) { document.getElementById('load6').textContent = 'No data.'; return; }
+
+  const latestDate = worst.reduce((a,b) => a.report_date > b.report_date ? a : b).report_date;
+  const rows = worst.filter(r => r.report_date === latestDate);
+
+  const counts = {red:0, amber:0, navy:0};
+  rows.forEach(r => {
+    if (r.skus_oos >= 2) counts.red++;
+    else if (r.skus_oos === 1) counts.amber++;
+    else counts.navy++;
+  });
+
+  let html = `<h2>Worst Stores — Immediate Attention Required (${fmtDate(latestDate)})</h2>
+    <p class="subtitle">${rows.length} stores below threshold. Sorted: most OOS SKUs first.</p>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;"><strong>${counts.red}</strong><br><small>Multi-SKU OOS</small></div>
+      <div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;"><strong>${counts.amber}</strong><br><small>Single SKU OOS</small></div>
+      <div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;"><strong>${counts.navy}</strong><br><small>Low Stock (&lt;2)</small></div>
+    </div>
+    <div class="table-wrap"><table><tr><th>#</th><th>State</th><th>Store</th><th>2L SOH</th><th>5L SOH</th><th>10L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Alert</th></tr>`;
+
+  rows.forEach((r, i) => {
+    const alertClass = r.skus_oos >= 2 ? 'alert-red' : r.skus_oos === 1 ? 'alert-amber' : 'alert-navy';
+    const cell = v => v === 0 ? `<td class="oos-cell">0</td>` : `<td style="text-align:center;">${v}</td>`;
+    html += `<tr>
+      <td style="text-align:center;color:#666;">${i+1}</td>
+      <td>${r.state}</td>
+      <td><strong>${r.store_name}</strong></td>
+      ${cell(r.soh_2l)}${cell(r.soh_5l)}${cell(r.soh_10l)}${cell(r.soh_6pack)}
+      <td style="text-align:center;">${r.skus_below_2}</td>
+      <td style="text-align:center;">${r.skus_oos}</td>
+      <td><span class="${alertClass}">${r.product_alert || ''}</span></td>
+    </tr>`;
+  });
+  html += `</table></div>`;
+  document.getElementById('tab6').innerHTML = html;
+}
+
+loadAll();
 </script>
 </body>
 </html>
