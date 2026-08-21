@@ -202,13 +202,22 @@ function renderTab1(daily, weekly, weekEnds) {
     <div class="kpi"><div class="val">901</div><div class="label">Total Stores Reporting</div></div>
   </div>`;
 
+  function diffCell(diff) {
+    if (diff > 0) return `<td style="text-align:center;"><span class="worsening">&#9650; +${diff}</span></td>`;
+    if (diff < 0) return `<td style="text-align:center;"><span class="improving">&#9660; ${diff}</span></td>`;
+    return `<td style="text-align:center;"><span class="stable">&#8212;</span></td>`;
+  }
+
   // Week comparison table (metrics × weeks)
   html += `<div class="table-wrap"><table><tr><th>Metric</th>`;
   weeks.forEach(w => {
     const locked = w.is_week_end;
     html += `<th>w/c ${fmtDate(w.week_commencing)} ${locked ? '<span class="locked-badge">LOCKED</span>' : '<span class="open-badge">LIVE</span>'}<br>${fmtDate(w.report_date)}</th>`;
   });
-  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[weeks.length-2].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+  // One delta column per adjacent week pair
+  for (let i = 0; i < weeks.length - 1; i++) {
+    html += `<th>${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
+  }
   html += `<th>Trend</th></tr>`;
 
   const metrics = [
@@ -220,11 +229,9 @@ function renderTab1(daily, weekly, weekEnds) {
     html += `<tr><td>${m.label}</td>`;
     const vals = weeks.map(w => { const s = weekSummary(w.report_date); return s ? s[m.key] : 0; });
     vals.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
-    if (weeks.length >= 2) {
-      const diff = vals[vals.length-1] - vals[vals.length-2];
-      html += `<td style="text-align:center;">${diff > 0 ? `<span class="worsening">+${diff}</span>` : diff < 0 ? `<span class="improving">${diff}</span>` : `<span>0</span>`}</td>`;
-      html += `<td class="${diff > 0 ? 'worsening' : diff < 0 ? 'improving' : 'stable'}">${diff > 0 ? 'WORSENING' : diff < 0 ? 'IMPROVING' : 'STABLE'}</td>`;
-    }
+    for (let i = 0; i < vals.length - 1; i++) html += diffCell(vals[i+1] - vals[i]);
+    const lastDiff = vals[vals.length-1] - vals[vals.length-2];
+    html += `<td class="${lastDiff > 0 ? 'worsening' : lastDiff < 0 ? 'improving' : 'stable'}">${lastDiff > 0 ? 'WORSENING' : lastDiff < 0 ? 'IMPROVING' : 'STABLE'}</td>`;
     html += `</tr>`;
   });
   html += `</table></div>`;
@@ -233,7 +240,9 @@ function renderTab1(daily, weekly, weekEnds) {
   html += `<div class="section-head">SKU-Level: Stores Below 2 Units by Week</div>`;
   html += `<div class="table-wrap"><table><tr><th>SKU</th>`;
   weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)} Below 2</th>`);
-  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[weeks.length-2].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+  for (let i = 0; i < weeks.length - 1; i++) {
+    html += `<th>${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
+  }
   weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)} OOS</th>`);
   html += `</tr>`;
 
@@ -242,10 +251,7 @@ function renderTab1(daily, weekly, weekEnds) {
     html += `<tr><td><strong>${sku}</strong></td>`;
     const b2vals = skuRows.map(r => r ? r.below_2 : 0);
     b2vals.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
-    if (weeks.length >= 2) {
-      const diff = b2vals[b2vals.length-1] - b2vals[b2vals.length-2];
-      html += `<td style="text-align:center;">${diff > 0 ? `<span class="worsening">+${diff}</span>` : diff < 0 ? `<span class="improving">${diff}</span>` : `<span>0</span>`}</td>`;
-    }
+    for (let i = 0; i < b2vals.length - 1; i++) html += diffCell(b2vals[i+1] - b2vals[i]);
     skuRows.forEach(r => html += `<td style="text-align:center;">${r ? r.oos : 0}</td>`);
     html += `</tr>`;
   });
