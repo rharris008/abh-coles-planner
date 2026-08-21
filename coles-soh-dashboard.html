@@ -470,8 +470,9 @@ function renderTab6(worst) {
 
   const counts = {red:0, amber:0, navy:0};
   rows.forEach(r => {
-    if (r.skus_oos >= 2 || (r.skus_oos === 1 && r.sku_detail && r.sku_detail.includes('6-Pack'))) counts.red++;
-    else if (r.skus_oos === 1) counts.amber++;
+    const pa = r.product_alert || '';
+    if (pa.includes('6-Pack OOS')) counts.red++;
+    else if (pa.includes('Non-6-Pack OOS')) counts.amber++;
     else counts.navy++;
   });
 
@@ -493,13 +494,16 @@ function renderTab6(worst) {
     <div class="table-wrap"><table>
       <tr><th>#</th><th>State</th><th>Store</th><th>10L SOH</th><th>5L SOH</th><th>2L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Weeks Bad</th><th>Product Alert</th></tr>`;
 
-  const cell = v => v === null ? `<td style="text-align:center;color:#999;">-</td>`
-    : v === 0 ? `<td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td>`
-    : v === 1 ? `<td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td>`
-    : `<td style="text-align:center;">${v}</td>`;
+  const cell = v => {
+    if (v === null) return `<td style="text-align:center;color:#999;">-</td>`;
+    if (v === 0) return `<td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td>`;
+    if (v < 2) return `<td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">${v}</td>`;
+    return `<td style="text-align:center;">${v}</td>`;
+  };
 
   sortedRows.forEach((r, i) => {
-    const alertClass = r.skus_oos >= 2 ? 'alert-red' : r.skus_oos === 1 ? 'alert-amber' : 'alert-navy';
+    const pa = r.product_alert || '';
+    const alertClass = pa.includes('6-Pack OOS') ? 'alert-red' : pa.includes('Non-6-Pack OOS') ? 'alert-amber' : 'alert-navy';
     const wks = appearances[r.store_name]?.size || 1;
     const wksLabel = wks >= 2 ? `<span style="color:#C0392B;font-weight:bold;">${wks}/${totalWeeks} &#9888;</span>` : `<span style="color:#666;">${wks}/${totalWeeks}</span>`;
     html += `<tr>
@@ -510,7 +514,7 @@ function renderTab6(worst) {
       <td style="text-align:center;">${r.skus_below_2}</td>
       <td style="text-align:center;">${r.skus_oos}</td>
       <td style="text-align:center;">${wksLabel}</td>
-      <td><span class="${alertClass}">${r.product_alert || ''}</span></td>
+      <td><span class="${alertClass}">${pa}</span></td>
     </tr>`;
   });
   html += `</table></div>`;
