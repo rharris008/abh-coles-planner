@@ -323,24 +323,36 @@ function renderTab3(daily) {
 
   let html = `<h2>Daily Movement — All Weeks</h2>
     <p class="subtitle">${fmtDate(daily[0].report_date)} to ${fmtDate(daily[daily.length-1].report_date)}. All 901 stores nationally.</p>
-    <div class="table-wrap"><table><tr><th>Day</th><th>Stores</th><th>Below 2 (Any SKU)</th><th>% Below 2</th><th>OOS (Any SKU)</th><th>All 4 OOS</th><th>Day Trend</th></tr>`;
+    <div class="table-wrap"><table><tr><th>Day</th><th>Stores</th><th>Below 2 (Any SKU)</th><th>% Below 2</th><th>Delta</th><th>OOS (Any SKU)</th><th>OOS Delta</th><th>All 4 OOS</th><th>Day Trend</th></tr>`;
 
-  daily.forEach(d => {
+  daily.forEach((d, i) => {
     const isWeekEnd = d.is_week_end;
-    const rowStyle = isWeekEnd && daily.indexOf(d) === daily.length-1
+    const rowStyle = isWeekEnd && i === daily.length-1
       ? ' style="background:#FDEAEF;"'
       : isWeekEnd ? ' style="background:#EBF3FC;"' : '';
     const dName = new Date(d.report_date + 'T00:00:00').toLocaleDateString('en-AU', {weekday:'short'});
     const dateStr = `${dName} ${fmtDate(d.report_date)}${isWeekEnd ? ' <span class="locked-badge" style="font-size:10px;">LOCKED</span>' : ''}`;
     const tc = trendClass(d.day_trend);
+    // Compute delta from previous day
+    const prev = i > 0 ? daily[i-1] : null;
+    const deltaB2 = prev !== null ? d.below_2_any_sku - prev.below_2_any_sku : null;
+    const deltaOOS = prev !== null ? d.oos_any_sku - prev.oos_any_sku : null;
+    const deltaCell = (delta) => {
+      if (delta === null) return `<td style="text-align:center;color:#999;">—</td>`;
+      if (delta > 0) return `<td style="text-align:center;"><span class="worsening">+${delta}</span></td>`;
+      if (delta < 0) return `<td style="text-align:center;"><span class="improving">${delta}</span></td>`;
+      return `<td style="text-align:center;"><span class="stable">0</span></td>`;
+    };
     html += `<tr${rowStyle}><td>${dateStr}</td><td style="text-align:center;">${d.stores_reporting}</td>
       <td style="text-align:center;">${d.below_2_any_sku}</td>
       <td style="text-align:center;">${d.pct_below_2}%</td>
+      ${deltaCell(deltaB2)}
       <td style="text-align:center;">${d.oos_any_sku}</td>
+      ${deltaCell(deltaOOS)}
       <td style="text-align:center;">${d.all_4_oos}</td>
       <td class="${tc}">${d.day_trend || ''}</td></tr>`;
   });
-  html += `</table></div><p style="color:#666;font-size:11px;">Blue rows = week-end snapshots (locked).</p>`;
+  html += `</table></div><p style="color:#666;font-size:11px;">Blue rows = week-end snapshots (locked). Delta = change vs previous trading day.</p>`;
   document.getElementById('tab3').innerHTML = html;
 }
 
