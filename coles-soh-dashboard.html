@@ -44,6 +44,8 @@ h2{font-size:15px;color:#1B2A4A;margin-top:0;}
 .alert-amber{background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
 .alert-navy{background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
 .oos-cell{background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;}
+.worst-sticky-bar{position:sticky;z-index:8;background:#f8f9fa;padding-bottom:8px;}
+#tab6 th{top:0;}
 @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
@@ -119,13 +121,23 @@ function showTab(id) {
 }
 document.querySelectorAll('.tab').forEach((t,i) => t.onclick = () => showTab(`tab${i+1}`));
 
-function setTabsOffset() {
-  const h = document.querySelector('.header');
-  const t = document.querySelector('.tabs');
-  if (h && t) t.style.top = h.getBoundingClientRect().height + 'px';
+function setStickyOffsets() {
+  const headerH = (document.querySelector('.header') || {getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height;
+  const tabsEl   = document.querySelector('.tabs');
+  if (tabsEl) tabsEl.style.top = headerH + 'px';
+  const tabsH   = (tabsEl || {getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height;
+
+  // Worst Stores sticky bar sits below header + tabs
+  const bar = document.getElementById('worst-bar');
+  if (bar) {
+    bar.style.top = (headerH + tabsH) + 'px';
+    // Table header in tab6 sits below header + tabs + pills bar
+    const barH = bar.getBoundingClientRect().height;
+    document.querySelectorAll('#tab6 th').forEach(th => th.style.top = (headerH + tabsH + barH) + 'px');
+  }
 }
-window.addEventListener('load', setTabsOffset);
-window.addEventListener('resize', setTabsOffset);
+window.addEventListener('load', setStickyOffsets);
+window.addEventListener('resize', setStickyOffsets);
 
 // ─── main load ───────────────────────────────────────────────────────────────
 async function loadAll() {
@@ -419,14 +431,16 @@ function renderTab6(worst) {
     else counts.navy++;
   });
 
-  let html = `<h2>Worst Stores — Immediate Attention Required (${fmtDate(latestDate)})</h2>
-    <p class="subtitle">${rows.length} stores below threshold. Sorted: most OOS SKUs first.</p>
-    <div style="display:flex;gap:10px;margin-bottom:12px;">
-      <div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;"><strong>${counts.red}</strong><br><small>Multi-SKU OOS</small></div>
-      <div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;"><strong>${counts.amber}</strong><br><small>Single SKU OOS</small></div>
-      <div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;"><strong>${counts.navy}</strong><br><small>Low Stock (&lt;2)</small></div>
+  let html = `<div class="worst-sticky-bar" id="worst-bar">
+      <h2 style="margin-bottom:2px;">Worst Stores — Immediate Attention Required (${fmtDate(latestDate)})</h2>
+      <p class="subtitle" style="margin-bottom:8px;">${rows.length} stores below threshold. Sorted: most OOS SKUs first.</p>
+      <div style="display:flex;gap:10px;">
+        <div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.red}</strong><br><small>Multi-SKU OOS</small></div>
+        <div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.amber}</strong><br><small>Single SKU OOS</small></div>
+        <div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.navy}</strong><br><small>Low Stock (&lt;2)</small></div>
+      </div>
     </div>
-    <div class="table-wrap"><table><tr><th>#</th><th>State</th><th>Store</th><th>2L SOH</th><th>5L SOH</th><th>10L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Alert</th></tr>`;
+    <div class="table-wrap"><table><tr><th>#</th><th>State</th><th>Store</th><th>10L SOH</th><th>5L SOH</th><th>2L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Alert</th></tr>`;
 
   rows.forEach((r, i) => {
     const alertClass = r.skus_oos >= 2 ? 'alert-red' : r.skus_oos === 1 ? 'alert-amber' : 'alert-navy';
@@ -435,7 +449,7 @@ function renderTab6(worst) {
       <td style="text-align:center;color:#666;">${i+1}</td>
       <td>${r.state}</td>
       <td><strong>${r.store_name}</strong></td>
-      ${cell(r.soh_2l)}${cell(r.soh_5l)}${cell(r.soh_10l)}${cell(r.soh_6pack)}
+      ${cell(r.soh_10l)}${cell(r.soh_5l)}${cell(r.soh_2l)}${cell(r.soh_6pack)}
       <td style="text-align:center;">${r.skus_below_2}</td>
       <td style="text-align:center;">${r.skus_oos}</td>
       <td><span class="${alertClass}">${r.product_alert || ''}</span></td>
@@ -443,6 +457,8 @@ function renderTab6(worst) {
   });
   html += `</table></div>`;
   document.getElementById('tab6').innerHTML = html;
+  // Run after paint so bar height is measurable
+  requestAnimationFrame(setStickyOffsets);
 }
 
 loadAll();
