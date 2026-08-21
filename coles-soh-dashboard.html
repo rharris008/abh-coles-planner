@@ -407,62 +407,54 @@ function renderTab4(weekly, weekEnds) {
   document.getElementById('tab4').innerHTML = html;
 }
 
-// ─── Tab 5: SKU analysis ──────────────────────────────────────────────────────
+// ─── Tab 5: SKU analysis — by state ──────────────────────────────────────────
 function renderTab5(weekly, weekEnds) {
   if (!weekEnds.length) { document.getElementById('load5').textContent = 'No data.'; return; }
   const skus = ['10L','5L','2L','600ml 6-Pack'];
+  const states = ['NSW','QLD','SA','TAS','VIC','WA'];
+  const storeTotals = {'NSW':237,'QLD':224,'SA':65,'TAS':19,'VIC':251,'WA':105};
   const weeks = weekEnds.slice(-4);
-  const latestSnap = weeks[weeks.length-1].report_date;
 
-  function skuDiffCell(diff) {
+  function diffCell(diff) {
     if (diff > 0) return `<td style="text-align:center;"><span class="worsening">+${diff}</span></td>`;
     if (diff < 0) return `<td style="text-align:center;"><span class="improving">${diff}</span></td>`;
-    return `<td style="text-align:center;"><span class="">0</span></td>`;
+    return `<td style="text-align:center;"><span class="stable">0</span></td>`;
   }
 
-  let html = `<h2>SKU Analysis — All Weeks</h2>
-    <p class="subtitle">Final-day snapshots. Threshold: 2 units. 901 Coles stores nationally.</p>
-    <div class="table-wrap"><table><tr><th>SKU</th>`;
-  weeks.forEach(w => html += `<th>Below 2 (w/c ${fmtDate(w.week_commencing)})</th>`);
-  // All adjacent-pair deltas + overall for Below 2
-  for (let i = 0; i < weeks.length - 1; i++) {
-    html += `<th>${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
-  }
-  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
-  weeks.forEach(w => html += `<th>OOS (w/c ${fmtDate(w.week_commencing)})</th>`);
-  // All adjacent-pair deltas + overall for OOS
-  for (let i = 0; i < weeks.length - 1; i++) {
-    html += `<th>OOS ${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
-  }
-  if (weeks.length >= 2) html += `<th>OOS ${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
-  html += `</tr>`;
+  let html = `<h2>SKU Analysis — Performance by State</h2>
+    <p class="subtitle">Each SKU shown across all states. Final-day weekly snapshots. Threshold: 2 units.</p>`;
 
   skus.forEach(sku => {
-    const rows = weeks.map(w => weekly.find(r => r.snapshot_date === w.report_date && r.state === 'ALL' && r.sku === sku));
-    const b2 = rows.map(r => r ? r.below_2 : 0);
-    const oos = rows.map(r => r ? r.oos : 0);
-    html += `<tr><td><strong>${sku}</strong></td>`;
-    b2.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
-    for (let i = 0; i < b2.length - 1; i++) html += skuDiffCell(b2[i+1] - b2[i]);
-    if (b2.length >= 2) html += skuDiffCell(b2[b2.length-1] - b2[0]);
-    oos.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
-    for (let i = 0; i < oos.length - 1; i++) html += skuDiffCell(oos[i+1] - oos[i]);
-    if (oos.length >= 2) html += skuDiffCell(oos[oos.length-1] - oos[0]);
-    html += `</tr>`;
-  });
-  html += `</table></div>`;
+    html += `<div class="section-head">${sku}</div>
+      <div class="table-wrap"><table><tr><th>State</th><th>Stores</th>`;
+    weeks.forEach(w => html += `<th>w/c ${fmtDate(w.week_commencing)}<br>Below 2</th><th>%</th>`);
+    if (weeks.length >= 2) html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}<br>Change</th>`;
+    html += `<th>Latest OOS</th><th>OOS %</th></tr>`;
 
-  // VIC detail
-  html += `<div class="section-head">VIC DETAIL (highest risk state) — w/c ${fmtDate(weeks[weeks.length-1].week_commencing)} Final</div>
-    <div class="table-wrap"><table><tr><th>SKU</th><th>VIC Stores Listed</th><th>VIC Below 2</th><th>VIC %</th><th>VIC OOS</th><th>VIC OOS %</th></tr>`;
-  skus.forEach(sku => {
-    const r = weekly.find(x => x.snapshot_date === latestSnap && x.state === 'VIC' && x.sku === sku);
-    if (!r) return;
-    html += `<tr><td>${sku}</td><td style="text-align:center;">${r.stores_total}</td>
-      <td style="text-align:center;">${r.below_2}</td><td style="text-align:center;">${pct(r.below_2,r.stores_total)}</td>
-      <td style="text-align:center;">${r.oos}</td><td style="text-align:center;">${pct(r.oos,r.stores_total)}</td></tr>`;
+    states.forEach(state => {
+      const total = storeTotals[state] || 0;
+      const rows = weeks.map(w => weekly.find(r => r.snapshot_date === w.report_date && r.state === state && r.sku === sku));
+      const b2vals = rows.map(r => r ? r.below_2 : 0);
+      const latestR = rows[rows.length - 1];
+      html += `<tr><td><strong>${state}</strong></td><td style="text-align:center;">${total}</td>`;
+      b2vals.forEach((v, i) => html += `<td style="text-align:center;">${v}</td><td style="text-align:center;">${pct(v,total)}</td>`);
+      if (weeks.length >= 2) html += diffCell(b2vals[b2vals.length-1] - b2vals[0]);
+      html += `<td style="text-align:center;">${latestR ? latestR.oos : 0}</td>`;
+      html += `<td style="text-align:center;">${latestR ? pct(latestR.oos, total) : '0.0%'}</td></tr>`;
+    });
+
+    // Totals row (ALL state)
+    const allRows = weeks.map(w => weekly.find(r => r.snapshot_date === w.report_date && r.state === 'ALL' && r.sku === sku));
+    const allB2 = allRows.map(r => r ? r.below_2 : 0);
+    const latestAll = allRows[allRows.length - 1];
+    html += `<tr style="font-weight:bold;background:#e8eef5;"><td>TOTAL</td><td style="text-align:center;">901</td>`;
+    allB2.forEach(v => html += `<td style="text-align:center;">${v}</td><td style="text-align:center;">${pct(v,901)}</td>`);
+    if (weeks.length >= 2) html += diffCell(allB2[allB2.length-1] - allB2[0]);
+    html += `<td style="text-align:center;">${latestAll ? latestAll.oos : 0}</td>`;
+    html += `<td style="text-align:center;">${latestAll ? pct(latestAll.oos, 901) : '0.0%'}</td></tr>`;
+    html += `</table></div>`;
   });
-  html += `</table></div>`;
+
   document.getElementById('tab5').innerHTML = html;
 }
 
