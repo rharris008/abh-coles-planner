@@ -31,7 +31,7 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#333;margin:0;padding:0;b
 .kpi .val.green{color:#27AE60;}
 .kpi .label{font-size:11px;color:#666;margin-top:4px;}
 table{border-collapse:collapse;width:100%;margin-bottom:20px;font-size:12px;}
-th{background:#1B2A4A;color:#fff;padding:6px 8px;text-align:center;font-size:11px;position:sticky;top:0;z-index:10;}
+th{background:#1B2A4A;color:#fff;padding:6px 8px;text-align:center;font-size:11px;}
 .table-wrap{overflow-x:auto;}
 td{padding:5px 8px;border:1px solid #e0e0e0;vertical-align:middle;}
 tr:nth-child(even){background:#F5F5F5;}
@@ -49,8 +49,7 @@ h2{font-size:15px;color:#1B2A4A;margin-top:0;}
 .alert-amber{background:#E67E22;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
 .alert-navy{background:#1B2A4A;color:#fff;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:bold;}
 .oos-cell{background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;}
-.worst-sticky-bar{position:sticky;z-index:8;background:#f8f9fa;padding-bottom:8px;}
-#tab6 th{top:0;}
+
 @media(max-width:700px){.kpi-grid{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
@@ -130,16 +129,6 @@ function setStickyOffsets() {
   const headerH = (document.querySelector('.header') || {getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height;
   const tabsEl   = document.querySelector('.tabs');
   if (tabsEl) tabsEl.style.top = headerH + 'px';
-  const tabsH   = (tabsEl || {getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height;
-
-  // Worst Stores sticky bar sits below header + tabs
-  const bar = document.getElementById('worst-bar');
-  if (bar) {
-    bar.style.top = (headerH + tabsH) + 'px';
-    // Table header in tab6 sits below header + tabs + pills bar
-    const barH = bar.getBoundingClientRect().height;
-    document.querySelectorAll('#tab6 th').forEach(th => th.style.top = (headerH + tabsH + barH) + 'px');
-  }
 }
 window.addEventListener('load', setStickyOffsets);
 window.addEventListener('resize', setStickyOffsets);
@@ -463,16 +452,16 @@ function renderTab5(weekly, weekEnds) {
   document.getElementById('tab5').innerHTML = html;
 }
 
-// ─── Tab 6: Worst stores (repeatedly bad tracking) ───────────────────────────
+// ─── Tab 6: Worst stores ─────────────────────────────────────────────────────
 function renderTab6(worst) {
   if (!worst.length) { document.getElementById('load6').textContent = 'No data.'; return; }
 
-  // All unique report dates (for repeated-bad tracking)
   const allDates = [...new Set(worst.map(r => r.report_date))].sort();
   const latestDate = allDates[allDates.length - 1];
   const rows = worst.filter(r => r.report_date === latestDate);
+  const totalWeeks = allDates.length;
 
-  // Count how many dates each store appeared across ALL history
+  // Count how many snapshots each store appeared in across ALL history
   const appearances = {};
   worst.forEach(r => {
     if (!appearances[r.store_name]) appearances[r.store_name] = new Set();
@@ -481,56 +470,52 @@ function renderTab6(worst) {
 
   const counts = {red:0, amber:0, navy:0};
   rows.forEach(r => {
-    if (r.skus_oos >= 2) counts.red++;
+    if (r.skus_oos >= 2 || (r.skus_oos === 1 && r.sku_detail && r.sku_detail.includes('6-Pack'))) counts.red++;
     else if (r.skus_oos === 1) counts.amber++;
     else counts.navy++;
   });
 
-  // Count repeatedly bad (appeared 2+ times)
-  const repeatCount = rows.filter(r => (appearances[r.store_name]?.size || 1) >= 2).length;
-  const totalWeeks = allDates.length;
+  // Sort: OOS desc, then below_2 desc, then state/store asc
+  const sortedRows = [...rows].sort((a,b) =>
+    b.skus_oos - a.skus_oos || b.skus_below_2 - a.skus_below_2 || a.state.localeCompare(b.state) || a.store_name.localeCompare(b.store_name)
+  );
 
-  let html = `<div class="worst-sticky-bar" id="worst-bar">
-      <h2 style="margin-bottom:2px;">Worst Stores — Immediate Attention Required (${fmtDate(latestDate)})</h2>
-      <p class="subtitle" style="margin-bottom:4px;">${rows.length} stores below threshold. Sorted: most OOS SKUs first. Tracking ${totalWeeks} week${totalWeeks!==1?'s':''} of data.</p>
-      ${repeatCount > 0 ? `<p class="subtitle" style="margin-bottom:8px;color:#C0392B;font-weight:bold;">&#9888; ${repeatCount} store${repeatCount!==1?'s':''} flagged as repeatedly bad (appeared in multiple snapshots).</p>` : '<p class="subtitle" style="margin-bottom:8px;">More snapshots needed to identify repeatedly bad stores.</p>'}
-      <div style="display:flex;gap:10px;">
-        <div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.red}</strong><br><small>Multi-SKU OOS</small></div>
-        <div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.amber}</strong><br><small>Single SKU OOS</small></div>
-        <div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.navy}</strong><br><small>Low Stock (&lt;2)</small></div>
-      </div>
+  const repeatCount = sortedRows.filter(r => (appearances[r.store_name]?.size || 1) >= 2).length;
+
+  let html = `<h2>Worst Stores — Immediate Attention Required (${fmtDate(latestDate)})</h2>
+    <p class="subtitle">${rows.length} stores below threshold. Sorted: most OOS SKUs first. Tracking ${totalWeeks} snapshot${totalWeeks!==1?'s':''} of data.</p>
+    ${repeatCount > 0 ? `<p class="subtitle" style="color:#C0392B;font-weight:bold;">&#9888; ${repeatCount} store${repeatCount!==1?'s':''} flagged as repeatedly bad (appeared in 2+ snapshots).</p>` : ''}
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.red}</strong><br><small>6-Pack OOS + Other</small></div>
+      <div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.amber}</strong><br><small>Single SKU OOS</small></div>
+      <div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.navy}</strong><br><small>Low Stock (&lt;2)</small></div>
     </div>
-    <div class="table-wrap"><table><tr><th>#</th><th>State</th><th>Store</th><th>Weeks Bad</th><th>10L SOH</th><th>5L SOH</th><th>2L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Alert</th></tr>`;
+    <div class="table-wrap"><table>
+      <tr><th>#</th><th>State</th><th>Store</th><th>10L SOH</th><th>5L SOH</th><th>2L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Weeks Bad</th><th>Product Alert</th></tr>`;
 
-  // Sort: most appearances first, then by OOS desc
-  const sortedRows = [...rows].sort((a,b) => {
-    const wA = appearances[a.store_name]?.size || 1;
-    const wB = appearances[b.store_name]?.size || 1;
-    if (wB !== wA) return wB - wA;
-    return b.skus_oos - a.skus_oos || b.skus_below_2 - a.skus_below_2;
-  });
+  const cell = v => v === null ? `<td style="text-align:center;color:#999;">-</td>`
+    : v === 0 ? `<td style="background:#FDEAEF;color:#C0392B;font-weight:bold;text-align:center;">0</td>`
+    : v === 1 ? `<td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td>`
+    : `<td style="text-align:center;">${v}</td>`;
 
   sortedRows.forEach((r, i) => {
     const alertClass = r.skus_oos >= 2 ? 'alert-red' : r.skus_oos === 1 ? 'alert-amber' : 'alert-navy';
-    const cell = v => v === null ? `<td style="text-align:center;color:#999;">-</td>` : v === 0 ? `<td class="oos-cell">0</td>` : v === 1 ? `<td style="background:#FFF3E0;color:#E67E22;font-weight:bold;text-align:center;">1</td>` : `<td style="text-align:center;">${v}</td>`;
     const wks = appearances[r.store_name]?.size || 1;
-    const wksStyle = wks >= 2 ? `style="text-align:center;font-weight:bold;color:#C0392B;"` : `style="text-align:center;color:#666;"`;
-    const wksLabel = wks >= 2 ? `${wks}/${totalWeeks} &#9888;` : `${wks}/${totalWeeks}`;
-    html += `<tr${wks >= 2 ? ' style="background:#FFF5F5;"' : ''}>
+    const wksLabel = wks >= 2 ? `<span style="color:#C0392B;font-weight:bold;">${wks}/${totalWeeks} &#9888;</span>` : `<span style="color:#666;">${wks}/${totalWeeks}</span>`;
+    html += `<tr>
       <td style="text-align:center;color:#666;">${i+1}</td>
       <td>${r.state}</td>
       <td><strong>${r.store_name}</strong></td>
-      <td ${wksStyle}>${wksLabel}</td>
       ${cell(r.soh_10l)}${cell(r.soh_5l)}${cell(r.soh_2l)}${cell(r.soh_6pack)}
       <td style="text-align:center;">${r.skus_below_2}</td>
       <td style="text-align:center;">${r.skus_oos}</td>
+      <td style="text-align:center;">${wksLabel}</td>
       <td><span class="${alertClass}">${r.product_alert || ''}</span></td>
     </tr>`;
   });
   html += `</table></div>`;
-  html += `<p style="color:#666;font-size:11px;">Weeks Bad = number of weekly snapshots this store appeared in. &#9888; = repeatedly bad (2+ weeks). Highlighted rows need compliance action.</p>`;
+  html += `<p style="color:#666;font-size:11px;">Weeks Bad = snapshots this store appeared in / total snapshots. &#9888; = repeatedly bad (2+ snapshots).</p>`;
   document.getElementById('tab6').innerHTML = html;
-  requestAnimationFrame(setStickyOffsets);
 }
 
 loadAll();
