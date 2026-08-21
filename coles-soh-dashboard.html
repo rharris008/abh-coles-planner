@@ -145,20 +145,28 @@ async function loadAll() {
     const [daily, weekly, worst] = await Promise.all([
       sbFetch('coles_soh_daily?order=report_date.asc&limit=200'),
       sbFetch('coles_soh_weekly?order=week_commencing.asc,snapshot_date.asc,state.asc,sku.asc&limit=500'),
-      sbFetch('coles_soh_worst_stores?order=skus_oos.desc,skus_below_2.desc,store_name.asc&limit=200'),
+      sbFetch('coles_soh_worst_stores?order=report_date.asc,skus_oos.desc,skus_below_2.desc,store_name.asc&limit=1000'),
     ]);
 
-    // Derive week list from daily data
-    const weekEnds = daily.filter(d => d.is_week_end).sort((a,b) => a.report_date.localeCompare(b.report_date));
-    const latestDay = daily[daily.length - 1];
-    const latestWeek = weekEnds[weekEnds.length - 1];
+    // Derive weekEnds from the weekly table (source of truth for locked weeks)
+    // Uses unique snapshot_dates from ALL/ALL rows — aligns with weekly table regardless of daily.is_week_end
+    const weekMap = {};
+    weekly.filter(w => w.state === 'ALL' && w.sku === 'ALL').forEach(w => {
+      if (!weekMap[w.snapshot_date]) weekMap[w.snapshot_date] = w;
+    });
+    const weekEnds = Object.values(weekMap)
+      .sort((a,b) => a.snapshot_date.localeCompare(b.snapshot_date))
+      .map(w => ({report_date: w.snapshot_date, week_commencing: w.week_commencing, is_week_end: true}));
+    const latestDay = daily.length ? daily[daily.length - 1] : null;
+    const latestWeek = weekEnds.length ? weekEnds[weekEnds.length - 1] : null;
 
     // Update header
-    if (daily.length) {
+    if (daily.length && latestDay) {
       const first = daily[0].report_date;
       const last  = latestDay.report_date;
+      const lockedNote = latestWeek ? ` | w/c ${fmtDate(latestWeek.week_commencing)} LOCKED` : '';
       document.getElementById('header-meta').textContent =
-        `Period: ${fmtDate(first)} to ${fmtDate(last)} | 901 Coles stores | Threshold: 2 units per SKU | Generated: ${fmtDate(last)}`;
+        `Period: ${fmtDate(first)} to ${fmtDate(last)} | 901 Coles stores | Threshold: 2 units per SKU | Generated: ${fmtDate(last)}${lockedNote}`;
     }
 
     renderTab1(daily, weekly, weekEnds);
@@ -224,14 +232,23 @@ function renderTab1(daily, weekly, weekEnds) {
     {label:'Stores with any Pureau SKU below 2 units', key:'below_2'},
     {label:'Stores with any Pureau SKU OOS (0 units)', key:'oos'},
     {label:'Stores with ALL 4 Pureau SKUs OOS',        key:'all_4_oos'},
+    {label:'Total stores reporting Pureau data',        key:'stores_total', fixed:901},
   ];
   metrics.forEach(m => {
     html += `<tr><td>${m.label}</td>`;
-    const vals = weeks.map(w => { const s = weekSummary(w.report_date); return s ? s[m.key] : 0; });
+    const vals = weeks.map(w => {
+      if (m.fixed) return m.fixed;
+      const s = weekSummary(w.report_date); return s ? s[m.key] : 0;
+    });
     vals.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
-    for (let i = 0; i < vals.length - 1; i++) html += diffCell(vals[i+1] - vals[i]);
-    const lastDiff = vals[vals.length-1] - vals[vals.length-2];
-    html += `<td class="${lastDiff > 0 ? 'worsening' : lastDiff < 0 ? 'improving' : 'stable'}">${lastDiff > 0 ? 'WORSENING' : lastDiff < 0 ? 'IMPROVING' : 'STABLE'}</td>`;
+    if (m.fixed) {
+      for (let i = 0; i < vals.length - 1; i++) html += `<td style="text-align:center;"><span class="">0</span></td>`;
+      html += `<td class="stable">STABLE</td>`;
+    } else {
+      for (let i = 0; i < vals.length - 1; i++) html += diffCell(vals[i+1] - vals[i]);
+      const lastDiff = vals[vals.length-1] - vals[vals.length-2];
+      html += `<td class="${lastDiff > 0 ? 'worsening' : lastDiff < 0 ? 'improving' : 'stable'}">${lastDiff > 0 ? 'WORSENING' : lastDiff < 0 ? 'IMPROVING' : 'STABLE'}</td>`;
+    }
     html += `</tr>`;
   });
   html += `</table></div>`;
@@ -256,7 +273,9 @@ function renderTab1(daily, weekly, weekEnds) {
     html += `</tr>`;
   });
   html += `</table></div>`;
-  html += `<p style="color:#666;font-size:11px;">LOCKED = final snapshot (end-of-week Friday close).</p>`;
+  // Build week-end label map for footnote
+  const wkLabels = weeks.map(w => `w/c ${fmtDate(w.week_commencing)} ended ${fmtDate(w.report_date)}`).join(', ');
+  html += `<p style="color:#666;font-size:11px;">LOCKED = final snapshot (end-of-week Friday close). ${wkLabels}.</p>`;
 
   document.getElementById('tab1').innerHTML = html;
 }
@@ -381,15 +400,27 @@ function renderTab5(weekly, weekEnds) {
   const weeks = weekEnds.slice(-4);
   const latestSnap = weeks[weeks.length-1].report_date;
 
+  function skuDiffCell(diff) {
+    if (diff > 0) return `<td style="text-align:center;"><span class="worsening">+${diff}</span></td>`;
+    if (diff < 0) return `<td style="text-align:center;"><span class="improving">${diff}</span></td>`;
+    return `<td style="text-align:center;"><span class="">0</span></td>`;
+  }
+
   let html = `<h2>SKU Analysis — All Weeks</h2>
     <p class="subtitle">Final-day snapshots. Threshold: 2 units. 901 Coles stores nationally.</p>
     <div class="table-wrap"><table><tr><th>SKU</th>`;
   weeks.forEach(w => html += `<th>Below 2 (w/c ${fmtDate(w.week_commencing)})</th>`);
-  if (weeks.length >= 2) {
-    html += `<th>${fmtDate(weeks[weeks.length-2].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
-    html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
+  // All adjacent-pair deltas + overall for Below 2
+  for (let i = 0; i < weeks.length - 1; i++) {
+    html += `<th>${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
   }
+  if (weeks.length >= 2) html += `<th>${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
   weeks.forEach(w => html += `<th>OOS (w/c ${fmtDate(w.week_commencing)})</th>`);
+  // All adjacent-pair deltas + overall for OOS
+  for (let i = 0; i < weeks.length - 1; i++) {
+    html += `<th>OOS ${fmtDate(weeks[i].week_commencing)}&#8211;${fmtDate(weeks[i+1].week_commencing)}</th>`;
+  }
+  if (weeks.length >= 2) html += `<th>OOS ${fmtDate(weeks[0].week_commencing)}&#8211;${fmtDate(weeks[weeks.length-1].week_commencing)}</th>`;
   html += `</tr>`;
 
   skus.forEach(sku => {
@@ -398,13 +429,11 @@ function renderTab5(weekly, weekEnds) {
     const oos = rows.map(r => r ? r.oos : 0);
     html += `<tr><td><strong>${sku}</strong></td>`;
     b2.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
-    if (weeks.length >= 2) {
-      const d1 = b2[b2.length-1] - b2[b2.length-2];
-      const d2 = b2[b2.length-1] - b2[0];
-      html += `<td style="text-align:center;">${d1>0?`<span class="worsening">+${d1}</span>`:d1<0?`<span class="improving">${d1}</span>`:`<span>0</span>`}</td>`;
-      html += `<td style="text-align:center;">${d2>0?`<span class="worsening">+${d2}</span>`:d2<0?`<span class="improving">${d2}</span>`:`<span>0</span>`}</td>`;
-    }
+    for (let i = 0; i < b2.length - 1; i++) html += skuDiffCell(b2[i+1] - b2[i]);
+    if (b2.length >= 2) html += skuDiffCell(b2[b2.length-1] - b2[0]);
     oos.forEach(v => html += `<td style="text-align:center;">${v}</td>`);
+    for (let i = 0; i < oos.length - 1; i++) html += skuDiffCell(oos[i+1] - oos[i]);
+    if (oos.length >= 2) html += skuDiffCell(oos[oos.length-1] - oos[0]);
     html += `</tr>`;
   });
   html += `</table></div>`;
@@ -423,12 +452,21 @@ function renderTab5(weekly, weekEnds) {
   document.getElementById('tab5').innerHTML = html;
 }
 
-// ─── Tab 6: Worst stores ──────────────────────────────────────────────────────
+// ─── Tab 6: Worst stores (repeatedly bad tracking) ───────────────────────────
 function renderTab6(worst) {
   if (!worst.length) { document.getElementById('load6').textContent = 'No data.'; return; }
 
-  const latestDate = worst.reduce((a,b) => a.report_date > b.report_date ? a : b).report_date;
+  // All unique report dates (for repeated-bad tracking)
+  const allDates = [...new Set(worst.map(r => r.report_date))].sort();
+  const latestDate = allDates[allDates.length - 1];
   const rows = worst.filter(r => r.report_date === latestDate);
+
+  // Count how many dates each store appeared across ALL history
+  const appearances = {};
+  worst.forEach(r => {
+    if (!appearances[r.store_name]) appearances[r.store_name] = new Set();
+    appearances[r.store_name].add(r.report_date);
+  });
 
   const counts = {red:0, amber:0, navy:0};
   rows.forEach(r => {
@@ -437,24 +475,41 @@ function renderTab6(worst) {
     else counts.navy++;
   });
 
+  // Count repeatedly bad (appeared 2+ times)
+  const repeatCount = rows.filter(r => (appearances[r.store_name]?.size || 1) >= 2).length;
+  const totalWeeks = allDates.length;
+
   let html = `<div class="worst-sticky-bar" id="worst-bar">
       <h2 style="margin-bottom:2px;">Worst Stores — Immediate Attention Required (${fmtDate(latestDate)})</h2>
-      <p class="subtitle" style="margin-bottom:8px;">${rows.length} stores below threshold. Sorted: most OOS SKUs first.</p>
+      <p class="subtitle" style="margin-bottom:4px;">${rows.length} stores below threshold. Sorted: most OOS SKUs first. Tracking ${totalWeeks} week${totalWeeks!==1?'s':''} of data.</p>
+      ${repeatCount > 0 ? `<p class="subtitle" style="margin-bottom:8px;color:#C0392B;font-weight:bold;">&#9888; ${repeatCount} store${repeatCount!==1?'s':''} flagged as repeatedly bad (appeared in multiple snapshots).</p>` : '<p class="subtitle" style="margin-bottom:8px;">More snapshots needed to identify repeatedly bad stores.</p>'}
       <div style="display:flex;gap:10px;">
         <div style="background:#C0392B;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.red}</strong><br><small>Multi-SKU OOS</small></div>
         <div style="background:#E67E22;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.amber}</strong><br><small>Single SKU OOS</small></div>
         <div style="background:#1B2A4A;color:#fff;padding:8px 14px;border-radius:4px;min-width:80px;"><strong>${counts.navy}</strong><br><small>Low Stock (&lt;2)</small></div>
       </div>
     </div>
-    <div class="table-wrap"><table><tr><th>#</th><th>State</th><th>Store</th><th>10L SOH</th><th>5L SOH</th><th>2L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Alert</th></tr>`;
+    <div class="table-wrap"><table><tr><th>#</th><th>State</th><th>Store</th><th>Weeks Bad</th><th>10L SOH</th><th>5L SOH</th><th>2L SOH</th><th>6-Pack SOH</th><th>SKUs &lt;2</th><th>SKUs OOS</th><th>Alert</th></tr>`;
 
-  rows.forEach((r, i) => {
+  // Sort: most appearances first, then by OOS desc
+  const sortedRows = [...rows].sort((a,b) => {
+    const wA = appearances[a.store_name]?.size || 1;
+    const wB = appearances[b.store_name]?.size || 1;
+    if (wB !== wA) return wB - wA;
+    return b.skus_oos - a.skus_oos || b.skus_below_2 - a.skus_below_2;
+  });
+
+  sortedRows.forEach((r, i) => {
     const alertClass = r.skus_oos >= 2 ? 'alert-red' : r.skus_oos === 1 ? 'alert-amber' : 'alert-navy';
     const cell = v => v === 0 ? `<td class="oos-cell">0</td>` : `<td style="text-align:center;">${v}</td>`;
-    html += `<tr>
+    const wks = appearances[r.store_name]?.size || 1;
+    const wksStyle = wks >= 2 ? `style="text-align:center;font-weight:bold;color:#C0392B;"` : `style="text-align:center;color:#666;"`;
+    const wksLabel = wks >= 2 ? `${wks}/${totalWeeks} &#9888;` : `${wks}/${totalWeeks}`;
+    html += `<tr${wks >= 2 ? ' style="background:#FFF5F5;"' : ''}>
       <td style="text-align:center;color:#666;">${i+1}</td>
       <td>${r.state}</td>
       <td><strong>${r.store_name}</strong></td>
+      <td ${wksStyle}>${wksLabel}</td>
       ${cell(r.soh_10l)}${cell(r.soh_5l)}${cell(r.soh_2l)}${cell(r.soh_6pack)}
       <td style="text-align:center;">${r.skus_below_2}</td>
       <td style="text-align:center;">${r.skus_oos}</td>
@@ -462,8 +517,8 @@ function renderTab6(worst) {
     </tr>`;
   });
   html += `</table></div>`;
+  html += `<p style="color:#666;font-size:11px;">Weeks Bad = number of weekly snapshots this store appeared in. &#9888; = repeatedly bad (2+ weeks). Highlighted rows need compliance action.</p>`;
   document.getElementById('tab6').innerHTML = html;
-  // Run after paint so bar height is measurable
   requestAnimationFrame(setStickyOffsets);
 }
 
